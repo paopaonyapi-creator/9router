@@ -713,6 +713,9 @@ export default function ProviderDetailPage() {
           const res = await fetch(`/api/providers/${id}`, { method: "DELETE" });
           if (res.ok) {
             setConnections(prev => prev.filter(c => c.id !== id));
+          } else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.error || "Failed to delete connection.");
           }
         } catch (error) {
           console.log("Error deleting connection:", error);
@@ -731,18 +734,22 @@ export default function ProviderDetailPage() {
         setConfirmState(null);
         let failed = 0;
         const idsToDelete = [...selectedConnectionIds];
+        const deletedIds = [];
         for (const id of idsToDelete) {
           try {
             const res = await fetch(`/api/providers/${id}`, { method: "DELETE" });
             if (!res.ok) failed += 1;
+            else deletedIds.push(id);
           } catch (error) {
             console.log("Error deleting connection:", error);
             failed += 1;
           }
         }
-        setConnections(prev => prev.filter(c => !idsToDelete.includes(c.id)));
+        // Only drop rows the server actually deleted — keeps UI in sync when
+        // the last-active-connection guard refuses part of a bulk delete.
+        setConnections(prev => prev.filter(c => !deletedIds.includes(c.id)));
         setSelectedConnectionIds([]);
-        if (failed > 0) alert(`Deleted ${idsToDelete.length - failed} connection(s), ${failed} failed.`);
+        if (failed > 0) alert(`Deleted ${deletedIds.length} connection(s), ${failed} failed.`);
       }
     });
   };

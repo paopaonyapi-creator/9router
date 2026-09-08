@@ -52,6 +52,40 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   const [bulkText, setBulkText] = useState("");
   const [bulkResult, setBulkResult] = useState(null); // { success, failed }
 
+  // Compatible-node model picker: live catalog for the typed key (datalist —
+  // free typing still allowed). Prevents typos like "glm 5.3".
+  const [modelOptions, setModelOptions] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelError, setModelError] = useState("");
+
+  const handleLoadModels = async () => {
+    if (!formData.apiKey) return;
+    setModelsLoading(true);
+    setModelError("");
+    try {
+      const res = await fetch("/api/providers/compatible-models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey: formData.apiKey }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.models) && data.models.length > 0) {
+        setModelOptions(data.models.map((m) => m.id));
+      } else {
+        setModelError(data.error || "No models found — type the exact model ID manually.");
+      }
+    } catch {
+      setModelError("Could not load models — type the exact model ID manually.");
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
+  const handleModelChange = (value) => {
+    setFormData({ ...formData, defaultModel: value });
+    setModelError(/\s/.test(value) ? "Model IDs cannot contain spaces." : "");
+  };
+
   const buildProviderSpecificData = () => {
     if (isOllamaLocal && formData.ollamaHostUrl.trim()) {
       return { baseUrl: formData.ollamaHostUrl.trim() };
@@ -98,6 +132,10 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
       if (!formData.name) return;
     }
     if (isCompatible && !formData.defaultModel.trim()) return;
+    if (isCompatible && /\s/.test(formData.defaultModel.trim())) {
+      setModelError("Model IDs cannot contain spaces.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -293,12 +331,38 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           />
         )}
         {isCompatible && (
-          <Input
-            label="Default Model"
-            value={formData.defaultModel}
-            onChange={(e) => setFormData({ ...formData, defaultModel: e.target.value })}
-            placeholder={isAnthropic ? "claude-3-5-sonnet-latest" : "gpt-4o-mini"}
-          />
+          <>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input
+                  label="Default Model"
+                  value={formData.defaultModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  placeholder={isAnthropic ? "claude-3-5-sonnet-latest" : "gpt-4o-mini"}
+                  hint="Pick from the list or type the exact model ID."
+                  list="compatible-model-list"
+                />
+              </div>
+              <div className="pb-1">
+                <Button
+                  variant="secondary"
+                  onClick={handleLoadModels}
+                  disabled={!formData.apiKey || modelsLoading}
+                  title="Load the model list from your endpoint"
+                >
+                  {modelsLoading ? "..." : "Load"}
+                </Button>
+              </div>
+            </div>
+            <datalist id="compatible-model-list">
+              {modelOptions.map((id) => (
+                <option key={id} value={id} />
+              ))}
+            </datalist>
+            {modelError && (
+              <p className="text-xs text-red-500 break-words">{modelError}</p>
+            )}
+          </>
         )}
         {isOllamaLocal && (
           <p className="text-xs text-text-muted">
@@ -315,7 +379,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
         {isCompatible && (
           <p className="text-xs text-text-muted">
-            Enter the model ID exactly as your compatible endpoint expects it. This model will be saved as the connection default.
+            Press Load after entering your key to pick from the live catalog, or type the model ID exactly as your endpoint expects it.
           </p>
         )}
         {isCloudflareAi && (
@@ -393,7 +457,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         </p>
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && (!formData.defaultModel.trim() || /\s/.test(formData.defaultModel.trim()))) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

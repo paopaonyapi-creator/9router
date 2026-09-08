@@ -14,7 +14,12 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
     name: "",
     priority: 1,
     apiKey: "",
+    defaultModel: "",
   });
+  // Compatible-node model picker (live catalog, free typing still allowed).
+  const [modelOptions, setModelOptions] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelError, setModelError] = useState("");
   const [azureData, setAzureData] = useState({
     azureEndpoint: "",
     apiVersion: "2024-10-01-preview",
@@ -35,7 +40,24 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
         name: connection.name || "",
         priority: connection.priority || 1,
         apiKey: "",
+        defaultModel: connection.defaultModel || "",
       });
+      setModelOptions([]);
+      setModelError("");
+      // Prefetch the live catalog so the default-model picker has options.
+      if (isOpenAICompatibleProvider(connection.provider) || isAnthropicCompatibleProvider(connection.provider)) {
+        setModelsLoading(true);
+        fetch(`/api/providers/${connection.id}/models`, { cache: "no-store" })
+          .then((res) => res.json())
+          .then((data) => {
+            const list = Array.isArray(data.models) ? data.models : [];
+            const ids = [...new Set(list.map((m) => m?.id || m?.name || m?.model).filter((id) => typeof id === "string" && id.trim()))];
+            setModelOptions(ids);
+            if (!ids.length && data.error) setModelError("Could not load models — type the exact model ID manually.");
+          })
+          .catch(() => setModelError("Could not load models — type the exact model ID manually."))
+          .finally(() => setModelsLoading(false));
+      }
       // Load Azure-specific data if present
       if (connection.provider === "azure" && connection.providerSpecificData) {
         setAzureData({
@@ -113,14 +135,25 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
     }
   };
 
+  const handleModelChange = (value) => {
+    setFormData((f) => ({ ...f, defaultModel: value }));
+    setModelError(/\s/.test(value) ? "Model IDs cannot contain spaces." : "");
+  };
+
   const handleSubmit = async () => {
     if (!connection) return;
+    const cleanDefaultModel = typeof formData.defaultModel === "string" ? formData.defaultModel.trim() : formData.defaultModel;
+    if (isCompatible && cleanDefaultModel && /\s/.test(cleanDefaultModel)) {
+      setModelError("Model IDs cannot contain spaces.");
+      return;
+    }
     setSaving(true);
     try {
       const updates = {
         name: formData.name,
         priority: formData.priority,
       };
+      if (isCompatible) updates.defaultModel = cleanDefaultModel || null;
       if (!isOAuth && formData.apiKey) {
         updates.apiKey = formData.apiKey;
         let isValid = validationResult === "success";
@@ -273,6 +306,27 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
           />
         )}
 
+        {isCompatible && (
+          <>
+            <Input
+              label="Default Model"
+              value={formData.defaultModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+              placeholder="e.g. glm-5.3-flash"
+              hint={modelsLoading ? "Loading live catalog…" : "Pick from the list or type the exact model ID."}
+              list="edit-compatible-model-list"
+            />
+            <datalist id="edit-compatible-model-list">
+              {modelOptions.map((id) => (
+                <option key={id} value={id} />
+              ))}
+            </datalist>
+            {modelError && (
+              <p className="text-xs text-red-500 break-words">{modelError}</p>
+            )}
+          </>
+        )}
+
         {!isCompatible && !isAzure && !isCloudflareAi && (
           <div className="flex items-center gap-3">
             <Button onClick={handleTest} variant="secondary" disabled={testing}>
@@ -304,6 +358,7 @@ EditConnectionModal.propTypes = {
     priority: PropTypes.number,
     authType: PropTypes.string,
     provider: PropTypes.string,
+    defaultModel: PropTypes.string,
     providerSpecificData: PropTypes.object,
   }),
   proxyPools: PropTypes.arrayOf(PropTypes.shape({
