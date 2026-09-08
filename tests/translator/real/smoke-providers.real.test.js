@@ -27,6 +27,69 @@ function firstLlmModel(providerId) {
   return llm?.id || null;
 }
 
+// Live gateway catalog grouped by model prefix (e.g. "maxplus/" -> ["glm-5.2", ...]).
+// Lets REAL tests cover user-created compatible nodes that have no static registry entry.
+// NOTE: cache the in-flight PROMISE (not the object) — concurrent tests must
+// share one fetch, otherwise latecomers read an empty half-filled cache.
+let gatewayCatalogPromise = null;
+async function loadGatewayCatalog() {
+  if (!gatewayCatalogPromise) gatewayCatalogPromise = fetchGatewayCatalog().catch(() => ({}));
+  return gatewayCatalogPromise;
+}
+async function fetchGatewayCatalog() {
+  const catalog = {};
+  try {
+    const { getApiKeys } = await import("../../../src/lib/localDb.js");
+    const keys = await getApiKeys();
+    const gwKey = keys.find((k) => k.isActive !== false)?.key;
+    if (!gwKey) return catalog;
+    const base = (process.env.GATEWAY_URL || "http://localhost:20128").replace(/\/$/, "");
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${gwKey}` }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return catalog;
+    for (const m of (await r.json()).data || []) {
+      const slash = String(m.id || "").indexOf("/");
+      if (slash <= 0) continue;
+      (catalog[m.id.slice(0, slash)] ||= []).push(m.id.slice(slash + 1));
+    }
+  } catch (e) {
+    console.warn(`[smoke] gateway catalog unavailable: ${e.message}`);
+  }
+  return catalog;
+}
+
+// Resolve a chat model for any active connection: static registry first,
+// then the connection's defaultModel, then the live gateway catalog matched
+// by node prefix (covers compatible nodes + ollama-local).
+async function resolveModel(providerId) {
+  const staticModel = firstLlmModel(providerId);
+  if (staticModel) return staticModel;
+  try {
+    const { getProviderConnections, getProviderNodes } = await import("../../../src/lib/localDb.js");
+    const conns = await getProviderConnections();
+    const conn = conns.find((c) => c.provider === providerId && c.isActive !== false);
+    if (!conn) return null;
+    // rowToConn spreads the data JSON to top level (defaultModel, apiKey, …).
+    if (conn.defaultModel) return conn.defaultModel;
+    try {
+      const def = typeof conn.data === "object"
+        ? conn.data?.defaultModel
+        : JSON.parse(conn.data || "{}").defaultModel;
+      if (def) return def;
+    } catch { /* ignore malformed data */ }
+    const nodes = await getProviderNodes().catch(() => []);
+    const prefix = nodes.find((n) => n.id === providerId)?.prefix
+      || (providerId === "ollama-local" ? "ollama-local" : null);
+    if (!prefix) return null;
+    const catalog = await loadGatewayCatalog();
+    return catalog[prefix]?.[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 // Drain the full Web Response SSE body into raw text.
 async function drainSSE(response) {
   if (!response?.body) return "";
@@ -58,8 +121,11 @@ describe.skipIf(!RUN_REAL).concurrent("REAL provider smoke", () => {
     it.concurrent(
       `${providerId}: responds to a short prompt`,
       async () => {
-        const model = firstLlmModel(providerId);
-        if (!model) return expect(true).toBe(true); // no llm model → skip silently
+        const model = await resolveModel(providerId);
+        if (!model) {
+          console.warn(`[skip] ${providerId}: no llm model (registry/default/catalog)`);
+          return expect(true).toBe(true);
+        }
 
         const credentials = await getProviderCredentials(providerId, new Set(), model);
         if (!credentials || credentials.allRateLimited) {
