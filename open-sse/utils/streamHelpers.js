@@ -17,6 +17,20 @@ export function parseSSELine(line, format = null) {
     return null;
   }
 
+  // No format given (stream flush tail, github executor): still accept a raw
+  // JSON line instead of silently dropping it. Explicit formats keep exact
+  // behavior above/below; SSE "data:" lines are unaffected (start with 'd').
+  if (format == null) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return null;
+      }
+    }
+  }
+
   // Standard SSE format: "data: {...}"
   if (line.charCodeAt(0) !== 100) return null; // 'd' = 100
 

@@ -148,6 +148,9 @@ export class BaseExecutor {
           signal: mergedSignal
         }, proxyOptions);
         clearTimeout(connectTimer);
+        // Defensive: a resolving-but-empty fetch (bad mock/proxy) must flow
+        // into the 502 network-error path, not crash on response.headers.
+        if (!response) throw new Error("empty response from fetch");
         const ct = response.headers?.get?.("content-type") || "";
         const cl = response.headers?.get?.("content-length") || "?";
         dbg("FETCH", `${this.provider.toUpperCase()} ← ${response.status} | ttft=${Date.now() - fetchT0}ms | ct=${ct} | cl=${cl}`);
