@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getProviderConnectionById,
+  getProviderConnections,
   getProxyPoolById,
   updateProviderConnection,
   deleteProviderConnection,
@@ -116,11 +117,17 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: proxyPoolResult.error }, { status: 400 });
     }
 
+    // Model ids never contain whitespace ("glm 5.3" would fail every upstream call).
+    const cleanDefaultModel = typeof defaultModel === "string" ? defaultModel.trim() : defaultModel;
+    if (cleanDefaultModel && /\s/.test(cleanDefaultModel)) {
+      return NextResponse.json({ error: "Default model must be a single model id without spaces (e.g. glm-5.3)" }, { status: 400 });
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (priority !== undefined) updateData.priority = priority;
     if (globalPriority !== undefined) updateData.globalPriority = globalPriority;
-    if (defaultModel !== undefined) updateData.defaultModel = defaultModel;
+    if (defaultModel !== undefined) updateData.defaultModel = cleanDefaultModel || null;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (apiKey && existing.authType === "apikey") updateData.apiKey = apiKey;
     if (testStatus !== undefined) updateData.testStatus = testStatus;
@@ -175,6 +182,20 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
+
+    const existing = await getProviderConnectionById(id);
+    if (!existing) {
+      return NextResponse.json({ error: "Connection not found" }, { status: 404 });
+    }
+    // Deleting the last active connection leaves the gateway with no
+    // providers — refuse with 400 (pause it instead if intentional).
+    if (existing.isActive !== false) {
+      const conns = await getProviderConnections();
+      const othersActive = conns.some((c) => c.id !== id && c.isActive !== false);
+      if (!othersActive) {
+        return NextResponse.json({ error: "Cannot delete the last active connection — pause it instead, or add a replacement first" }, { status: 400 });
+      }
+    }
 
     const deleted = await deleteProviderConnection(id);
     if (!deleted) {

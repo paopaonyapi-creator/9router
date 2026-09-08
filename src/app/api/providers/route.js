@@ -123,6 +123,11 @@ export async function POST(request) {
     if (!connectionName) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
+    // Model ids never contain whitespace ("glm 5.3" would fail every upstream call).
+    const cleanDefaultModel = typeof defaultModel === "string" ? defaultModel.trim() : defaultModel;
+    if (cleanDefaultModel && /\s/.test(cleanDefaultModel)) {
+      return NextResponse.json({ error: "Default model must be a single model id without spaces (e.g. glm-5.3)" }, { status: 400 });
+    }
 
     let providerSpecificData = normalizeProviderSpecificData(provider, body, body.providerSpecificData);
 
@@ -179,7 +184,7 @@ export async function POST(request) {
       apiKey: apiKey || "",
       priority: priority || 1,
       globalPriority: globalPriority || null,
-      defaultModel: defaultModel || null,
+      defaultModel: cleanDefaultModel || null,
       providerSpecificData: mergedProviderSpecificData,
       isActive: true,
       testStatus: testStatus || "unknown",

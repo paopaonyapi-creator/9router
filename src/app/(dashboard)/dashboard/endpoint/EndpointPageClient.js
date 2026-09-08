@@ -24,6 +24,9 @@ export default function APIPageClient({ machineId }) {
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
+  const [keyError, setKeyError] = useState("");
+  const activeKeyCount = keys.filter((k) => k.isActive !== false).length;
+  const isLastActiveKey = (id) => activeKeyCount <= 1 && keys.some((k) => k.id === id && k.isActive !== false);
 
   const [requireApiKey, setRequireApiKey] = useState(false);
   const [requireLogin, setRequireLogin] = useState(true);
@@ -645,6 +648,11 @@ export default function APIPageClient({ machineId }) {
   };
 
   const handleDeleteKey = async (id) => {
+    setKeyError("");
+    if (isLastActiveKey(id)) {
+      setKeyError("Cannot delete the last active API key — create a replacement first.");
+      return;
+    }
     setConfirmState({
       title: "Delete API Key",
       message: "Delete this API key?",
@@ -659,15 +667,20 @@ export default function APIPageClient({ machineId }) {
               next.delete(id);
               return next;
             });
+          } else {
+            const data = await res.json().catch(() => ({}));
+            setKeyError(data.error || "Failed to delete key");
           }
         } catch (error) {
           console.log("Error deleting key:", error);
+          setKeyError("Failed to delete key");
         }
       }
     });
   };
 
   const handleToggleKey = async (id, isActive) => {
+    setKeyError("");
     try {
       const res = await fetch(`/api/keys/${id}`, {
         method: "PUT",
@@ -676,9 +689,13 @@ export default function APIPageClient({ machineId }) {
       });
       if (res.ok) {
         setKeys(prev => prev.map(k => k.id === id ? { ...k, isActive } : k));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setKeyError(data.error || "Failed to update key");
       }
     } catch (error) {
       console.log("Error toggling key:", error);
+      setKeyError("Failed to update key");
     }
   };
 
@@ -1007,6 +1024,9 @@ export default function APIPageClient({ machineId }) {
           </div>
         ) : (
           <div className="flex flex-col">
+            {keyError && (
+              <p className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-2">{keyError}</p>
+            )}
             {keys.map((key) => (
               <div
                 key={key.id}
@@ -1047,6 +1067,7 @@ export default function APIPageClient({ machineId }) {
                   <Toggle
                     size="sm"
                     checked={key.isActive ?? true}
+                    disabled={isLastActiveKey(key.id)}
                     onChange={(checked) => {
                       if (key.isActive && !checked) {
                         setConfirmState({
@@ -1061,11 +1082,13 @@ export default function APIPageClient({ machineId }) {
                         handleToggleKey(key.id, checked);
                       }
                     }}
-                    title={key.isActive ? "Pause key" : "Resume key"}
+                    title={isLastActiveKey(key.id) ? "Last active key — create a replacement first" : (key.isActive ? "Pause key" : "Resume key")}
                   />
                   <button
                     onClick={() => handleDeleteKey(key.id)}
-                    className="p-2 hover:bg-red-500/10 rounded text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                    disabled={isLastActiveKey(key.id)}
+                    title={isLastActiveKey(key.id) ? "Last active key — create a replacement first" : "Delete key"}
+                    className="p-2 hover:bg-red-500/10 rounded text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                   </button>
