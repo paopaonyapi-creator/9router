@@ -17,7 +17,13 @@ async function setupDb() {
     createProviderNode,
     getModelInfo,
     cleanup() {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      // Windows: better-sqlite3 keeps the temp DB file locked until process
+      // exit, so rmSync throws EPERM. Tolerate it; %TEMP% is OS-cleaned.
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (err) {
+        if (err?.code !== "EPERM") throw err;
+      }
     },
   };
 }

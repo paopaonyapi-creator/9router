@@ -701,12 +701,16 @@ describe("Kiro terminal integrity recovery", () => {
   });
 
   it("surfaces retry HTTP failures as SSE after heartbeat commits headers", async () => {
+    // Base walks all fallback hosts on 401, so every URL needs a queued
+    // response — otherwise the mock resolves undefined (never happens live).
+    const denied = () => new Response("unauthorized", {
+      status: 401,
+      statusText: "Unauthorized"
+    });
     fetchMock
       .mockResolvedValueOnce(response([]))
-      .mockResolvedValueOnce(new Response("unauthorized", {
-        status: 401,
-        statusText: "Unauthorized"
-      }));
+      .mockResolvedValueOnce(denied())
+      .mockResolvedValue(denied());
 
     const result = await execute();
     const body = await result.response.text();
@@ -717,12 +721,15 @@ describe("Kiro terminal integrity recovery", () => {
   });
 
   it("bounds the retry HTTP error body", async () => {
+    // Base walks all fallback hosts on 401 — queue a body for every URL.
+    const bigError = () => new Response(`error-start-${"x".repeat(10_000)}-error-tail`, {
+      status: 401,
+      statusText: "Unauthorized"
+    });
     fetchMock
       .mockResolvedValueOnce(response([]))
-      .mockResolvedValueOnce(new Response(`error-start-${"x".repeat(10_000)}-error-tail`, {
-        status: 401,
-        statusText: "Unauthorized"
-      }));
+      .mockResolvedValueOnce(bigError())
+      .mockResolvedValue(bigError());
 
     const body = await (await execute()).response.text();
 

@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock DNS lookup so we control which host resolves to what IP.
+// Production calls lookup(host, { all: true }) which resolves to an ARRAY
+// of { address, family } — the mock normalizes to that contract.
 const lookupMock = vi.fn();
-vi.mock("node:dns/promises", () => ({ lookup: (...a) => lookupMock(...a) }));
+vi.mock("node:dns/promises", () => ({
+  lookup: async (...a) => {
+    const r = await lookupMock(...a);
+    return Array.isArray(r) ? r : [{ address: r.address, family: r.family || (String(r.address).includes(":") ? 6 : 4) }];
+  },
+}));
 
 import { fetchImageAsBase64 } from "../../open-sse/translator/concerns/image.js";
 

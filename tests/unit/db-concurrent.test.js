@@ -18,7 +18,13 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  // Windows: better-sqlite3 keeps the temp DB file locked until process
+  // exit, so rmSync throws EPERM. Tolerate it; %TEMP% is OS-cleaned.
+  try {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  } catch (err) {
+    if (err?.code !== "EPERM") throw err;
+  }
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
 });

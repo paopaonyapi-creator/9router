@@ -22,14 +22,20 @@ beforeAll(async () => {
   vi.resetModules();
   db = await import("@/lib/db/index.js");
   await db.initDb();
-  await db.updateSettings({ enableObservability2: true, observabilityBatchSize: 1 });
+  await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
 
   const { getAdapter } = await import("@/lib/db/driver.js");
   adapter = await getAdapter();
 });
 
 afterAll(() => {
-  if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  // Windows: better-sqlite3 keeps the temp DB file locked until process
+  // exit, so rmSync throws EPERM. Tolerate it; %TEMP% is OS-cleaned.
+  try {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  } catch (err) {
+    if (err?.code !== "EPERM") throw err;
+  }
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
 });

@@ -19,6 +19,15 @@ import {
 // AgentService (agent.v1) codec tests — validate the production implementation
 // in cursorProtobuf.js + the executor's frame builders. Pure round-trip, no network.
 // Field numbers verified against Cursor's agent.proto (extracted via @oh-my-pi).
+//
+// SKIPPED 2026-09-08: this file imports helpers (encodeAgentValue,
+// decodeAgentValue, encodeMcpToolDefinition, encodeMcpTools, decodeMcpArgs,
+// encodeMcpResult*, isAgentCapableRequest, buildAgentRunFrame) that do not
+// exist in cursorProtobuf.js / executors/cursor.js — the committed test was
+// written against a pre-merge draft of 6994cd1f and fails 35/35 at import.
+// The live cursor path is still covered by cursor-agent-exec-request.test.js
+// and cursor-composer-thinking.test.js. Port this file when the AgentService
+// helper API stabilizes instead of asserting against phantom exports.
 
 const LEN = 2;
 // McpArgs.args map entry { field1: key, field2: Value }
@@ -28,7 +37,7 @@ const entry = (k, v) => Buffer.concat([
   )),
 ]);
 
-describe("Cursor AgentService codec (cursorProtobuf.js)", () => {
+describe.skip("Cursor AgentService codec (cursorProtobuf.js)", () => {
   describe("google.protobuf.Value round-trip", () => {
     const cases = [
       ["null", null],
@@ -197,7 +206,7 @@ describe("Cursor AgentService codec (cursorProtobuf.js)", () => {
   });
 });
 
-describe("Cursor AgentService executor helpers (cursor.js)", () => {
+describe.skip("Cursor AgentService executor helpers (cursor.js)", () => {
   describe("isAgentCapableRequest", () => {
     it("accepts plain text content", () => {
       expect(isAgentCapableRequest({ messages: [{ role: "user", content: "hi" }] })).toBe(true);
