@@ -8,8 +8,8 @@
 .fonts-loaded .material-symbols-outlined { visibility: visible; }
 
 /* ============================================================
-   9Router palette — adopted from 9remote_private/web
-   Brand orange (dark) / soft coral (light), neutral warm bases
+   Pao 9Router palette — Apple-style system neutrals,
+   brand orange accent, SF-like type scale
    ============================================================ */
 :root {
   /* Brand scale (light) - centered on #E56A4A */
@@ -28,23 +28,23 @@
   --color-primary: var(--color-brand-500);
   --color-primary-hover: var(--color-brand-600);
 
-  /* Surfaces & backgrounds (light) */
-  --color-bg: #FDFAF6;
-  --color-bg-alt: #F7F3EE;
+  /* Surfaces & backgrounds (light, Apple system grays) */
+  --color-bg: #f5f5f7;
+  --color-bg-alt: #ececee;
   --color-surface: #ffffff;
-  --color-surface-2: #f4f4f5;
-  --color-surface-3: #e7e7e9;
-  --color-sidebar: rgba(244, 241, 236, 0.85);
+  --color-surface-2: #e9e9ee;
+  --color-surface-3: #dedee4;
+  --color-sidebar: rgba(251, 251, 253, 0.8);
 
-  /* Borders */
-  --color-border: #e5e7eb;
-  --color-border-subtle: #f1f1f3;
+  /* Borders (Apple separators) */
+  --color-border: #d2d2d7;
+  --color-border-subtle: #e8e8ed;
 
-  /* Text */
-  --color-text: #0a0a0a;
-  --color-text-main: #0a0a0a;
-  --color-text-muted: #6B7280;
-  --color-text-subtle: #9CA3AF;
+  /* Text (Apple ink) */
+  --color-text: #1d1d1f;
+  --color-text-main: #1d1d1f;
+  --color-text-muted: #6e6e73;
+  --color-text-subtle: #aeaeb2;
 
   /* Status */
   --color-danger: #cf222e;
@@ -52,18 +52,18 @@
   --color-warning: #F59E0B;
   --color-info: #3B82F6;
 
-  /* Radius */
-  --radius-brand: 10px;
-  --radius-brand-lg: 14px;
+  /* Radius (Apple squircles) */
+  --radius-brand: 12px;
+  --radius-brand-lg: 18px;
 
-  /* Shadows */
+  /* Shadows (soft Apple-style) */
   --shadow-soft: 0 1px 2px 0 rgba(0,0,0,0.04);
   --shadow-warm: 0 2px 12px -2px rgba(229, 106, 74, 0.18);
-  --shadow-elevated: 0 12px 28px -4px rgba(60, 50, 45, 0.06);
+  --shadow-elevated: 0 12px 32px -8px rgba(0, 0, 0, 0.08);
   --shadow-elev:
-    inset 0 1px 0 0 rgba(255,255,255,0.8),
-    0 1px 2px rgba(15,23,42,0.04),
-    0 12px 36px -8px rgba(15,23,42,0.10);
+    inset 0 1px 0 0 rgba(255,255,255,0.9),
+    0 1px 2px rgba(0,0,0,0.04),
+    0 12px 32px -8px rgba(0,0,0,0.10);
   --shadow-focus: 0 0 0 3px rgba(229,106,74,0.18);
 
   color-scheme: light;
@@ -85,21 +85,21 @@
   --color-primary: #E56A4A;
   --color-primary-hover: #cc5236;
 
-  /* Surfaces (dark - Claude-like neutral warm) */
-  --color-bg: #1a1a1a;
-  --color-bg-alt: #1F1F1E;
-  --color-surface: #262626;
-  --color-surface-2: #303030;
-  --color-surface-3: #3a3a3a;
-  --color-sidebar: rgba(30, 30, 30, 0.85);
+  /* Surfaces (dark, Apple true-black) */
+  --color-bg: #000000;
+  --color-bg-alt: #101012;
+  --color-surface: #1d1d1f;
+  --color-surface-2: #2c2c2e;
+  --color-surface-3: #3a3a3c;
+  --color-sidebar: rgba(28, 28, 30, 0.8);
 
-  --color-border: #333333;
-  --color-border-subtle: #2a2a2a;
+  --color-border: #38383a;
+  --color-border-subtle: #2c2c2e;
 
-  --color-text: #ededed;
-  --color-text-main: #ededed;
-  --color-text-muted: #9ca3af;
-  --color-text-subtle: #6b7280;
+  --color-text: #f5f5f7;
+  --color-text-main: #f5f5f7;
+  --color-text-muted: #98989d;
+  --color-text-subtle: #6e6e73;
 
   --color-danger: #ef4444;
   --color-success: #22c55e;
@@ -171,18 +171,18 @@ select {
   --color-info: var(--color-info);
 
   /* Static fallbacks (explicit per-mode usage if needed) */
-  --color-bg-light: #FCFBF9;
-  --color-bg-dark: #1a1a1a;
+  --color-bg-light: #f5f5f7;
+  --color-bg-dark: #000000;
   --color-surface-light: #ffffff;
-  --color-surface-dark: #262626;
-  --color-sidebar-light: #F4F1EC;
-  --color-sidebar-dark: #1F1F1E;
-  --color-border-light: #e5e7eb;
-  --color-border-dark: #333333;
-  --color-text-main-light: #0a0a0a;
-  --color-text-main-dark: #ededed;
-  --color-text-muted-light: #6B7280;
-  --color-text-muted-dark: #9ca3af;
+  --color-surface-dark: #1d1d1f;
+  --color-sidebar-light: #FBFBFD;
+  --color-sidebar-dark: #1C1C1E;
+  --color-border-light: #d2d2d7;
+  --color-border-dark: #38383a;
+  --color-text-main-light: #1d1d1f;
+  --color-text-main-dark: #f5f5f7;
+  --color-text-muted-light: #6e6e73;
+  --color-text-muted-dark: #98989d;
 
   /* Radius */
   --radius-brand: var(--radius-brand);
@@ -311,7 +311,7 @@ input, textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 .dark .bg-vibrancy {
-  background: rgba(38, 38, 38, 0.72);
+  background: rgba(28, 28, 30, 0.72);
 }
 
 /* macOS Traffic Lights */

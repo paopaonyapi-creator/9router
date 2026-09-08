@@ -155,7 +155,10 @@ export default function LoginPage() {
       <div className="landing-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">9Router</h1>
+          <div className="mx-auto mb-4 flex items-center justify-center size-14 rounded-[16px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-[var(--shadow-warm)] ring-1 ring-black/5">
+            <span className="material-symbols-outlined text-white text-[28px]">hub</span>
+          </div>
+          <h1 className="text-[28px] font-semibold tracking-tight text-text-main mb-2">Pao 9Router</h1>
           <p className="text-text-muted">
             {samlAvailable
               ? "Sign in with SAML 2.0 Single Sign-On"
