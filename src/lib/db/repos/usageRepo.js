@@ -271,10 +271,13 @@ export async function saveRequestUsage(entry) {
         ]
       );
 
-      if (existing) {
-        if (!existing.endpoint && entry.endpoint) {
-          db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
-        }
+      // Same-millisecond timestamps collide under concurrency (ISO ms
+      // resolution), so an "existing" row is only a true duplicate when it
+      // is an endpoint backfill (row lacks endpoint, new save provides it).
+      // Otherwise this is a distinct request — fall through and insert it
+      // instead of silently dropping a real usage row.
+      if (existing && !existing.endpoint && entry.endpoint) {
+        db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
         return;
       }
 
