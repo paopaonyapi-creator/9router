@@ -1,5 +1,13 @@
 # Unreleased
 
+## Features
+- **Desktop**: one-click launcher shortcuts — `scripts/start-9router.ps1`
+  starts the server hidden if the port is free (reads `PORT` from `.env`,
+  waits for listen, logs to `logs/server.log`), opens the dashboard in the
+  browser, and is a no-op when already running; `scripts/stop-9router.ps1`
+  stops the node process on the port (never touches foreign processes).
+  On Windows create desktop `.lnk` shortcuts pointing at either script.
+
 ## Sync
 - Merged upstream decolua/9router **v0.5.56 → v0.5.75** (120 commits) — Kiro
   thinking budgets, Codex/GPT-5.6 effort mapping, xiaomi-mimo dual auth, Fish
