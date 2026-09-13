@@ -125,15 +125,60 @@ http.createServer = (...args) => {
   return server;
 };
 
+function parsePort(argv) {
+  const i = argv.indexOf("--port");
+  return i >= 0 && argv[i + 1] ? parseInt(argv[i + 1], 10) : null;
+}
+
+function parseHostname(argv) {
+  const i = argv.indexOf("--hostname");
+  return i >= 0 && argv[i + 1] ? argv[i + 1] : null;
+}
+
+// Pre-flight bind check. Next's raw failure here is a bare EADDRINUSE inside a
+// promise dump ("Failed to start server"), which reads as "the app just won't
+// start" -- especially from the tray where the window closes instantly. Turn it
+// into an actionable message before handing off.
+function isPortFree(port) {
+  const net = require("net");
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once("error", () => resolve(false));
+    probe.once("listening", () => probe.close(() => resolve(true)));
+    probe.listen(port);
+    // Safety net so a weird adapter can never hang startup on this pre-check.
+    setTimeout(() => resolve(true), 2000).unref();
+  });
+}
+
 if (require.main === module) {
-  const standalone = path.join(__dirname, "server.js");
-  if (fs.existsSync(standalone)) {
-    require(standalone);
-  } else {
-    // Repo checkout has no standalone build next to us. `next start` builds its HTTP
-    // server in-process, so the wrapper above still sanitizes every request.
-    const nextBin = require.resolve("next/dist/bin/next");
-    process.argv = [process.argv[0], nextBin, "start", ...process.argv.slice(2)];
-    require(nextBin);
-  }
+  (async () => {
+    const args = process.argv.slice(2);
+    const portArg = parsePort(args);
+    const hostnameArg = parseHostname(args);
+    // Same precedence next applies: --port flag > PORT env > 3000.
+    const port = portArg || parseInt(process.env.PORT || "", 10) || 3000;
+    if (!(await isPortFree(port))) {
+      console.error("");
+      console.error("[9router] Port " + port + " is already in use -- that's why the server won't start.");
+      console.error("");
+      console.error("  Find the process holding it:");
+      console.error("    Windows    : Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq " + port);
+      console.error("                 then: Stop-Process -Id <PID> -Force");
+      console.error("    macOS/Linux: lsof -i :" + port + "   then: kill <PID>");
+      console.error("");
+      console.error("  Or run on another port: npm run dev -- --port 30100 / npm run start -- --port 30100");
+      process.exit(1);
+    }
+    const standalonePath = path.join(__dirname, "server.js");
+    if (fs.existsSync(standalonePath)) {
+      require(standalonePath);
+    } else {
+      // Repo checkout has no standalone build next to us. `next start` builds its HTTP
+      // server in-process, so the wrapper above still sanitizes every request.
+      const nextBin = require.resolve("next/dist/bin/next");
+      process.argv = [process.argv[0], nextBin, "start", ...(portArg ? ["--port", String(portArg)] : []), ...(hostnameArg ? ["--hostname", hostnameArg] : [])];
+      require(nextBin);
+    }
+  })();
 }

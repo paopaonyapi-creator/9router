@@ -1,3 +1,29 @@
+# Unreleased
+
+## Fixes
+- **Server**: align npm dev/start scripts on the product-standard port **20128** —
+  they hardcoded 20127 while `.env` (`PORT`/`BASE_URL`), the CLI launcher, updater,
+  tunnels, and all dashboard copy use 20128, so different start methods landed on
+  different ports and collided (EADDRINUSE on every second start)
+- **Server**: `custom-server.js` pre-checks the port before booting and exits with an
+  actionable message (who holds it, how to free it, how to pick another port) instead
+  of Next's bare `EADDRINUSE` promise dump that reads as "the app just won't start"
+- **Stream**: passthrough no longer appends a second `data: [DONE]` when the upstream
+  already terminated its own stream — strict clients choked on the duplicate sentinel
+  (also tolerates `data:[DONE]` without the trailing space)
+
+## Dependencies
+- monaco-editor `^0.56.0`, better-sqlite3 `^13.0.3` (optional), pin `dompurify`
+  override to `^3.4.14`
+
+## Tests
+- **Baseline**: `verify-no-regression.mjs` resolves result paths portably (any
+  checkout layout, Windows included) and accepts a machine snapshot
+  (`current-run.json`) so environment-specific fails don't count as regressions
+- **Security audit**: source-grep audits resolve repo files from the test file's
+  location instead of the process cwd — running vitest from `tests/` vs the repo
+  root no longer decides pass/fail on its own
+
 # v0.5.55 (2026-08-14)
 
 ## Features
