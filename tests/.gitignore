@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 .vite/
 coverage/
+translator/__snapshots__/golden-url-header.test.js.snap
+__baseline__/verify-run.json
