@@ -192,6 +192,12 @@ export function createSSEStream(options = {}) {
             }
           }
 
+          // Upstream already terminated its own stream — remember it so
+          // flush() doesn't append a second [DONE] sentinel (duplicate breaks strict parsers)
+          if (trimmed.startsWith("data:") && trimmed.slice(5).trim() === "[DONE]") {
+            streamDoneSent = true;
+          }
+
           if (!injectedUsage) {
             if (line.startsWith("data:") && !line.startsWith("data: ")) {
               output = "data: " + line.slice(5) + "\n";
