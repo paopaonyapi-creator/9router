@@ -86,3 +86,7 @@ graphify-out/*
 .codegraph/
 .PR/
 .next-analyze/*
+
+# Security-scan plugin state (mimosa)
+.mimosa/
+tests/.mimosa/
