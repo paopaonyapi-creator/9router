@@ -65,6 +65,25 @@ describe("request normalization", () => {
     expect(result.messages[0].content).toBe("a\nb");
   });
 
+
+  it("filterToOpenAIFormat preserves cache_control text arrays", () => {
+    const body = {
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "cached", cache_control: { type: "ephemeral" } },
+            { type: "text", text: "tail" },
+          ],
+        },
+      ],
+    };
+
+    const result = filterToOpenAIFormat(JSON.parse(JSON.stringify(body)), { preserveCacheControl: true });
+    expect(Array.isArray(result.messages[0].content)).toBe(true);
+    expect(result.messages[0].content[0].cache_control).toEqual({ type: "ephemeral" });
+  });
+
   it("translateRequest keeps /v1/messages Claude->OpenAI text payloads string-safe", () => {
     const body = {
       model: "ollama/gpt-oss:120b",

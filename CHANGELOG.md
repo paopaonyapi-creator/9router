@@ -22,6 +22,8 @@
 - **Server**: `custom-server.js` pre-checks the port before booting and exits with an
   actionable message (who holds it, how to free it, how to pick another port) instead
   of Next's bare `EADDRINUSE` promise dump that reads as "the app just won't start"
+- **Translator**: flatten text-only OpenAI content arrays to a string (Ollama and other strict gateways 400 on a text-part array) while keeping mixed/cached parts as arrays
+- **Kiro**: document Amazon Q as the first inference surface for every auth method after the runtime path gateway was deprecated
 - **Stream**: passthrough no longer appends a second `data: [DONE]` when the upstream
   already terminated its own stream — strict clients choked on the duplicate sentinel
   (also tolerates `data:[DONE]` without the trailing space)
@@ -34,6 +36,7 @@
 - **Baseline**: `verify-no-regression.mjs` resolves result paths portably (any
   checkout layout, Windows included) and accepts a machine snapshot
   (`current-run.json`) so environment-specific fails don't count as regressions
+- **Kiro**: thinking-budget tests read the user-content prefix after top-level `systemPrompt` was removed (400 REQUEST_BODY_INVALID); external IdP first hop matches Amazon Q
 - **Security audit**: source-grep audits resolve repo files from the test file's
   location instead of the process cwd — running vitest from `tests/` vs the repo
   root no longer decides pass/fail on its own
