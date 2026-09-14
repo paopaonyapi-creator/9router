@@ -15,6 +15,12 @@
   branding, port 20128 alignment, and the stream/server fixes below all kept.
 
 ## Fixes
+- **Translator**: stop emitting literal `<think>` / `</think>` as OpenAI `delta.content` on Claude streams — thinking stays on `reasoning_content` only (upstream #4063)
+- **Translator**: keep Responses `function_call_output` images as image parts instead of JSON-stringifying base64 into the tool message (upstream #4058)
+- **Translator / Codex**: preserve optional tool parameters and Chat Completions `strict: false` when converting to Responses so optional fields are not coerced required (upstream #4069)
+- **Auth**: do not cool down an account for a request-scoped 4xx (context overflow / malformed body); 401/402/403/404/429 and quota wording still fall back (upstream #4059)
+- **Capabilities**: declare Cline Solar Pro / LongCat before the o-series globs so `solar-pro4` is not captured as `*o4*` (upstream #4064)
+- **Docs**: CLAUDE.md no longer claims `next dev` defaults to port 20127
 - **Server**: align npm dev/start scripts on the product-standard port **20128** —
   they hardcoded 20127 while `.env` (`PORT`/`BASE_URL`), the CLI launcher, updater,
   tunnels, and all dashboard copy use 20128, so different start methods landed on
@@ -31,6 +37,9 @@
 ## Dependencies
 - monaco-editor `^0.56.0`, better-sqlite3 `^13.0.3` (optional), pin `dompurify`
   override to `^3.4.14`
+- Patch bumps in-range: next/`@next/third-parties` `^16.3.5`, jose `^6.2.12`,
+  marked `^18.0.13`, undici `^7.29.1`, `@xyflow/react` `^12.11.6`, open `^11.0.4`,
+  postcss `^8.5.28`
 
 ## Tests
 - **Baseline**: `verify-no-regression.mjs` resolves result paths portably (any
