@@ -27,6 +27,13 @@
 - **OpenCode**: strip prior reasoning items on Muse Spark Responses models, and demote Muse Free `tool_choice` to `auto` (upstream #4061, #4062)
 - **Pricing**: align provider token costs and long-context tiers (upstream #4068)
 - **Usage**: preserve and normalize `usage.cost.total` on chat completions (upstream #4074)
+- **Stream**: synthesize `finish_reason: network_error` when an OpenAI stream ends without a terminal, keep a single `[DONE]`, and log tool-call-only turns (upstream #4079)
+- **Translator**: strip Claude Code `output_config.format` for Claude-compatible gateways and passthrough (upstream #4050)
+- **Capabilities**: OpenAI reasoning models cannot disable thinking via `reasoning_effort: none` (upstream #4048)
+- **Dashboard**: surface why a provider connection test failed (upstream #4048)
+- **Google PSE**: configure and validate Search Engine IDs (upstream #4047)
+- **CLI**: persist model IDs instead of catalog objects when creating TUI combos (upstream #4046)
+- **Models**: merge member capabilities into combo `/v1/models` entries (upstream #4034)
 - **Docs**: CLAUDE.md no longer claims `next dev` defaults to port 20127
 - **Server**: align npm dev/start scripts on the product-standard port **20128** —
   they hardcoded 20127 while `.env` (`PORT`/`BASE_URL`), the CLI launcher, updater,

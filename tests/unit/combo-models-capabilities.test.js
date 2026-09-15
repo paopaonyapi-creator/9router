@@ -35,9 +35,20 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
+  try {
+    const adapter = global._dbAdapter?.instance;
+    adapter?.close?.();
+  } catch {}
+  if (global._dbAdapter) {
+    global._dbAdapter.instance = null;
+    global._dbAdapter.initPromise = null;
+  }
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
+  if (!tempDir) return;
+  const resolved = path.resolve(tempDir);
+  if (path.dirname(resolved) !== path.resolve(os.tmpdir()) || !path.basename(resolved).startsWith("9router-combo-caps-")) return;
+  fs.rmSync(resolved, { recursive: true, force: true });
 });
 
 async function getComboModels() {
