@@ -21,6 +21,12 @@
 - **Translator / Codex**: preserve optional tool parameters and Chat Completions `strict: false` when converting to Responses so optional fields are not coerced required (upstream #4069)
 - **Auth**: do not cool down an account for a request-scoped 4xx (context overflow / malformed body); 401/402/403/404/429 and quota wording still fall back (upstream #4059)
 - **Capabilities**: declare Cline Solar Pro / LongCat before the o-series globs so `solar-pro4` is not captured as `*o4*` (upstream #4064)
+- **Capabilities**: DeepSeek V4.1* accepts low..max effort and has real image input; exact `deepseek-v4.1-flash` / `deepseek-flash` ids declare vision (upstream #4053, #4076)
+- **Model catalog**: make the synced catalog reach request handling and key modalities by gateway so short ids do not inherit another vendor's vision (upstream #4076)
+- **RTK**: skip ponytail injection on media-carrying requests so vision grounding is not degraded (upstream #4056)
+- **OpenCode**: strip prior reasoning items on Muse Spark Responses models, and demote Muse Free `tool_choice` to `auto` (upstream #4061, #4062)
+- **Pricing**: align provider token costs and long-context tiers (upstream #4068)
+- **Usage**: preserve and normalize `usage.cost.total` on chat completions (upstream #4074)
 - **Docs**: CLAUDE.md no longer claims `next dev` defaults to port 20127
 - **Server**: align npm dev/start scripts on the product-standard port **20128** —
   they hardcoded 20127 while `.env` (`PORT`/`BASE_URL`), the CLI launcher, updater,
