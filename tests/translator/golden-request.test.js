@@ -27,10 +27,10 @@ function baseBody() {
   };
 }
 
-// Khử field động: toolNameMap, kiro conversationId/agentContinuationId (uuid), timestamp trong content.
+// Khử field động: toolNameMap, kiro conversationId (uuid), timestamp trong content.
 function clean(body) {
   const s = JSON.stringify(body, (k, v) => {
-    if (k === "_toolNameMap" || k === "conversationId" || k === "agentContinuationId") return undefined;
+    if (k === "_toolNameMap" || k === "conversationId") return undefined;
     return v;
   }).replace(/Current time is [^"\\]+/g, "Current time is <TS>");
   return JSON.parse(s);
@@ -99,5 +99,30 @@ describe("GOLDEN request: OpenAI → Kiro", () => {
   it("full body (image base64 + tool_result)", () => {
     const out = translateRequest(FORMATS.OPENAI, FORMATS.KIRO, "claude-sonnet-4.5", baseBody(), true, { accessToken: "t" }, "kiro");
     expect(clean(out)).toMatchSnapshot();
+  });
+
+  it("keeps system and thinking instructions in the first user turn without legacy wire fields", () => {
+    const out = translateRequest(
+      FORMATS.OPENAI,
+      FORMATS.KIRO,
+      "claude-sonnet-4.5",
+      { ...baseBody(), reasoning_effort: "high" },
+      true,
+      { accessToken: "t" },
+      "kiro"
+    );
+
+    // Current Kiro request surfaces reject these former top-level/session fields.
+    expect(out).not.toHaveProperty("systemPrompt");
+    expect(out).not.toHaveProperty("agentMode");
+    expect(out.conversationState).not.toHaveProperty("agentTaskType");
+    expect(out.conversationState).not.toHaveProperty("agentContinuationId");
+    expect(out.conversationState.conversationId).toEqual(expect.any(String));
+
+    const firstUserContent = out.conversationState.history[0].userInputMessage.content;
+    expect(firstUserContent).toContain("<instructions>\nYou are helpful.\n</instructions>");
+    expect(firstUserContent).toContain("<thinking_mode>enabled</thinking_mode>");
+    expect(firstUserContent).toContain("<max_thinking_length>24576</max_thinking_length>");
+    expect(out.conversationState.currentMessage.userInputMessage.content).not.toContain("<thinking_mode>");
   });
 });

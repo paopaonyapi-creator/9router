@@ -34,14 +34,15 @@ cd cli && npm run dev  # nodemon watch
 Tests (vitest, in `tests/`, an **independent** ESM package — not wired into root `npm test`):
 ```bash
 npm install                             # ROOT deps first — tests import from src/ which needs `open`, `undici`, etc.
-cd tests && npm install                 # then tests' own deps (vitest) → tests/node_modules (allowed by tests/.gitignore)
-npx vitest run                          # all tests; auto-discovers tests/vitest.config.js
-npx vitest run unit/capabilities.test.js   # single file (path relative to tests/)
+npm --prefix tests install              # separate test dependencies
+node tests/node_modules/vitest/vitest.mjs run --config tests/vitest.config.js --exclude '**/*.live.test.js' --exclude '**/real/**'
+node tests/node_modules/vitest/vitest.mjs run --config tests/vitest.config.js tests/unit/capabilities.test.js
+node --test tests/unit/desktop-launcher.test.cjs   # Windows launcher fixtures; skips on other platforms
 ```
-> The committed `tests/package.json` `test` script hardcodes Unix paths (`NODE_PATH=/tmp/node_modules …`) — a shared-install workaround from upstream. On Windows (or anywhere), ignore it and use the `npx vitest` form above; `vitest.config.js` resolves the `open-sse`/`@/` aliases from the repo root regardless of where vitest lives.
+> Keep the working directory at the repository root: some tests resolve source paths from `process.cwd()`. The independent `tests/package.json` uses Vitest, but `npm --prefix tests test` changes cwd and can produce misleading missing-source errors. `*.cjs` and some `.test.js` files use `node:test` and need the Node runner. The broad command above excludes live-provider files; individual mocked tests can still expose missing network mocks.
 >
-> **The suite is NOT expected to be all-green on a plain checkout.** ~938 pass, ~64 fail. Judge regressions with `tests/__baseline__/verify-no-regression.mjs`, not a raw run. Expected red:
-> - 26 catalogued in `tests/__baseline__/known-fails.txt` (rtk, oauth-cursor-auto-import, translator-request-normalization, …).
+> **The suite has existing failures on this checkout.** Save a fresh JSON result (`--reporter=json --outputFile=logs/test-results.json`) and run `node tests/__baseline__/verify-no-regression.mjs logs/test-results.json`. Also inspect the test exit code and log: passing the baseline comparison does not mean every test passed. The gate compares assertions and suite diagnostics against the existing baseline without updating it.
+> - `tests/__baseline__/known-fails.txt` and `current-run.json` record prior failures; do not refresh them to make a new failure pass.
 > - `unit/embeddings.cloud.test.js` imports `cloud/src/handlers/embeddings.js` — the `cloud/` worker dir is **not in this repo**, so it always fails here.
 > - `unit/xai-oauth-service.test.js` times out (5s) when the xAI endpoint-discovery fetch isn't reachable/mocked.
 > - `real/*.real.test.js` make live provider calls — need credentials, skip otherwise.

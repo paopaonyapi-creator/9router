@@ -15,6 +15,7 @@
   branding, port 20128 alignment, and the stream/server fixes below all kept.
 
 ## Fixes
+- **Desktop**: pass the configured `.env` port directly to this checkout's absolute server entrypoint; verify listener ownership and process creation time before reusing or stopping it, leaving unrelated Node servers alone
 - **Translator**: stop emitting literal `<think>` / `</think>` as OpenAI `delta.content` on Claude streams — thinking stays on `reasoning_content` only (upstream #4063)
 - **Translator**: keep Responses `function_call_output` images as image parts instead of JSON-stringifying base64 into the tool message (upstream #4058)
 - **Translator / Codex**: preserve optional tool parameters and Chat Completions `strict: false` when converting to Responses so optional fields are not coerced required (upstream #4069)
@@ -42,6 +43,9 @@
   postcss `^8.5.28`
 
 ## Tests
+- **Kiro**: update golden/direct-route expectations after removal of legacy wire fields; verify system/thinking content and frozen first-turn replay with fresh current-turn timestamps
+- **Baseline**: detect failed suites (import, collection, and cleanup errors) even when no assertion failed; compare normalized error diagnostics so a new failure in a previously failing file is rejected
+- **Desktop**: exercise configured ports, start/stop reuse, foreign-process protection and process identity checks using isolated Windows fixture servers
 - **Baseline**: `verify-no-regression.mjs` resolves result paths portably (any
   checkout layout, Windows included) and accepts a machine snapshot
   (`current-run.json`) so environment-specific fails don't count as regressions
