@@ -18,7 +18,28 @@ import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { updateProviderCredentials } from "@/sse/services/tokenRefresh";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
-import { capabilitiesFromServiceKind, getCapabilitiesForModel, DEFAULT_CAPABILITIES } from "open-sse/providers/capabilities.js";
+import { capabilitiesFromServiceKind, getCapabilitiesForModel, aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
+
+// Qoder shares one live resolver across intl (qoder) and CN (qoder-cn); the
+// credentials carry the provider id so qoderModels picks the right region's
+// catalog endpoint.
+async function resolveQoderLiveModels(conn, provider) {
+  const result = await resolveQoderModels({
+    provider,
+    accessToken: conn.accessToken,
+    // PAT (pt-...) connections keep the token in apiKey; without it the live
+    // catalog silently fails and /v1/models falls back to the static list.
+    apiKey: conn.apiKey,
+    refreshToken: conn.refreshToken,
+    email: conn.email,
+    displayName: conn.displayName,
+    providerSpecificData: conn.providerSpecificData || {}
+  });
+  // Visible + hidden (enable:false) catalog keys — chat routes all of them.
+  const models = routableQoderModels(result);
+  if (!models.length) return null;
+  return { models: models.map((m) => ({ id: m.id, name: m.name })) };
+}
 
 // Per-provider live model resolvers. Each receives a connection record and
 // returns { models: [{ id, name? }, ...] } | null on failure.
@@ -32,22 +53,8 @@ const LIVE_MODEL_RESOLVERS = {
     }, { log: console });
     return result?.models?.length ? { models: result.models } : null;
   },
-  qoder: async (conn) => {
-    const result = await resolveQoderModels({
-      accessToken: conn.accessToken,
-      // PAT (pt-...) connections keep the token in apiKey; without it the live
-      // catalog silently fails and /v1/models falls back to the static list.
-      apiKey: conn.apiKey,
-      refreshToken: conn.refreshToken,
-      email: conn.email,
-      displayName: conn.displayName,
-      providerSpecificData: conn.providerSpecificData || {}
-    });
-    // Visible + hidden (enable:false) catalog keys — chat routes all of them.
-    const models = routableQoderModels(result);
-    if (!models.length) return null;
-    return { models: models.map((m) => ({ id: m.id, name: m.name })) };
-  },
+  qoder: async (conn) => resolveQoderLiveModels(conn, "qoder"),
+  "qoder-cn": async (conn) => resolveQoderLiveModels(conn, "qoder-cn"),
   kimchi: async (conn) => {
     const result = await resolveKimchiModels({
       accessToken: conn.accessToken,
@@ -248,65 +255,32 @@ function comboMatchesKinds(combo, kindFilter) {
   return kindFilter.includes(kind);
 }
 
-// Boolean capability flags are unioned across members (OR): a feature is
-// available to the combo if any member supports it.
-const COMBO_BOOLEAN_CAPS = [
-  "vision", "pdf", "audioInput", "videoInput", "imageOutput",
-  "audioOutput", "search", "tools", "reasoning",
-  "thinkingCanDisable", "thinkingEffortSupported",
-];
+// OpenAI-compatible clients treat max_completion_tokens as a hard limit for
+// every route a combo may select, so expose the minimum leaf-model ceiling even
+// though aggregateComboCapabilities.maxOutput describes the combo's union.
+function comboMaxCompletionTokens(memberIds, comboLookup, depth = 0, seen = new Set()) {
+  if (!Array.isArray(memberIds) || memberIds.length === 0 || depth > 6) return null;
+  const limits = [];
 
-/**
- * Aggregate capabilities across a combo's member models so the /v1/models entry
- * carries the same shape as a concrete model. Numeric limits are the MINIMUM
- * across members (a request can route to any member, so the combo is bounded by
- * the smallest window); boolean features are the UNION; format scalars take the
- * first non-null. Nested combos are flattened (mirrors the chat path, which
- * re-expands a bare combo name as a single model). `seen` guards against cycles.
- * @param {string[]} memberStrings - combo.models entries (provider/model, alias, or nested combo name)
- * @param {Map<string,object>} comboByName - name -> combo, for nested expansion
- * @param {Set<string>} [seen] - names already visited (cycle guard)
- * @returns {object|null} merged capabilities, or null if no resolvable members
- */
-function mergeComboCapabilities(memberStrings, comboByName, seen = new Set()) {
-  if (!Array.isArray(memberStrings) || memberStrings.length === 0) return null;
-
-  const merged = { ...DEFAULT_CAPABILITIES };
-  let resolvedAny = false;
-  let seenFinite = false;
-
-  for (const member of memberStrings) {
-    if (typeof member !== "string") continue;
-
-    let caps;
-    if (member.includes("/")) {
-      const { provider, model } = parseModel(member);
-      caps = getCapabilitiesForModel(provider, model);
-    } else if (comboByName.has(member)) {
-      if (seen.has(member)) continue; // cycle guard
-      seen.add(member);
-      caps = mergeComboCapabilities(comboByName.get(member).models, comboByName, seen);
-    } else {
-      caps = getCapabilitiesForModel(null, member);
+  for (const fullId of memberIds) {
+    if (typeof fullId !== "string") continue;
+    if (!fullId.includes("/") && comboLookup?.[fullId]) {
+      if (seen.has(fullId)) continue;
+      const nestedSeen = new Set(seen);
+      nestedSeen.add(fullId);
+      const nestedLimit = comboMaxCompletionTokens(comboLookup[fullId], comboLookup, depth + 1, nestedSeen);
+      if (Number.isFinite(nestedLimit)) limits.push(nestedLimit);
+      continue;
     }
-    if (!caps) continue;
 
-    for (const key of COMBO_BOOLEAN_CAPS) {
-      if (caps[key]) merged[key] = true;
-    }
-    if (merged.thinkingFormat === null && caps.thinkingFormat != null) merged.thinkingFormat = caps.thinkingFormat;
-    if (merged.thinkingRange === null && caps.thinkingRange != null) merged.thinkingRange = caps.thinkingRange;
-    if (Number.isFinite(caps.contextWindow)) {
-      merged.contextWindow = seenFinite ? Math.min(merged.contextWindow, caps.contextWindow) : caps.contextWindow;
-    }
-    if (Number.isFinite(caps.maxOutput)) {
-      merged.maxOutput = seenFinite ? Math.min(merged.maxOutput, caps.maxOutput) : caps.maxOutput;
-    }
-    resolvedAny = true;
-    seenFinite = true;
+    const slash = fullId.indexOf("/");
+    const provider = slash === -1 ? null : fullId.slice(0, slash);
+    const model = slash === -1 ? fullId : fullId.slice(slash + 1);
+    const maxOutput = getCapabilitiesForModel(provider, model)?.maxOutput;
+    if (Number.isFinite(maxOutput)) limits.push(maxOutput);
   }
 
-  return resolvedAny ? merged : null;
+  return limits.length ? Math.min(...limits) : null;
 }
 
 /**
@@ -332,9 +306,6 @@ export async function buildModelsList(kindFilter, options = {}) {
   } catch (e) {
     console.log("Could not fetch combos");
   }
-  // Name -> combo, used to flatten nested combos when merging capabilities.
-  const comboByName = new Map(combos.map((c) => [c.name, c]));
-
   let customModels = [];
   try {
     customModels = await getCustomModels();
@@ -366,6 +337,9 @@ export async function buildModelsList(kindFilter, options = {}) {
 
   const models = [];
 
+  // Lookup map so aggregateComboCapabilities can recursively resolve nested combos
+  const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
+
   // Combos first (filtered by kind). Web combos expose `kind` so AI knows search vs fetch.
   for (const combo of combos) {
     if (!comboMatchesKinds(combo, kindFilter)) continue;
@@ -377,13 +351,11 @@ export async function buildModelsList(kindFilter, options = {}) {
     if (combo.kind === "webSearch" || combo.kind === "webFetch") {
       entry.kind = combo.kind;
     } else {
-      // Merge capabilities from member models so clients see a context window
-      // and feature set for the combo (bounded by its smallest-window member).
-      const caps = mergeComboCapabilities(combo.models, comboByName);
-      if (caps) {
-        entry.capabilities = caps;
-        entry.context_length = caps.contextWindow;
-        entry.max_completion_tokens = caps.maxOutput;
+      const comboCaps = aggregateComboCapabilities(combo.models, comboByName);
+      if (comboCaps) {
+        entry.capabilities = comboCaps;
+        entry.context_length = comboCaps.contextWindow;
+        entry.max_completion_tokens = comboMaxCompletionTokens(combo.models, comboByName) ?? comboCaps.maxOutput;
       }
     }
     models.push(entry);
@@ -404,6 +376,7 @@ export async function buildModelsList(kindFilter, options = {}) {
           id: `${alias}/${model.id}`,
           object: "model",
           owned_by: alias,
+          capabilities: getCapabilitiesForModel(alias, model.id),
         });
       }
     }
@@ -564,9 +537,9 @@ export async function buildModelsList(kindFilter, options = {}) {
         // { id, name } — no per-model capability data. Fall back to the same
         // pattern-matched capabilities the dashboard uses (useModelCaps.js) so
         // dynamically-discovered LLM models still surface vision/reasoning/search/tools.
-        const caps = liveCapabilitiesById.get(modelId)
-          || capabilitiesFromServiceKind(customKind || liveKind)
-          || (kind === LLM_KIND ? getCapabilitiesForModel(providerId, modelId) : null);
+        const liveCaps = liveCapabilitiesById.get(modelId);
+        const serviceCaps = capabilitiesFromServiceKind(customKind || liveKind);
+        const caps = liveCaps || serviceCaps || (kind === LLM_KIND ? getCapabilitiesForModel(providerId, modelId) : null);
         if (caps) model.capabilities = caps;
         // Token limits under the snake_case names the OpenAI/OpenRouter
         // convention uses. `capabilities.contextWindow` is camelCase and nested,
