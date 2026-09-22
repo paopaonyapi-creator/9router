@@ -16,6 +16,9 @@
   branding, port 20128 alignment, and the stream/server fixes below all kept.
 
 ## Fixes
+- **Responses / Codex**: merge each Responses assistant turn's visible text, reasoning, and tool calls into one Chat Completions assistant message so thinking-mode upstreams do not reject valid history (upstream #4222)
+- **Claude**: map API refusals to `content_filter` and surface `stop_details.explanation` instead of returning an empty successful response (upstream #4210)
+- **Tool calls**: coerce malformed or freeform `function.arguments` to valid JSON before dispatch so strict OpenAI-compatible upstreams do not reject the full request (upstream #4208)
 - **Desktop**: pass the configured `.env` port directly to this checkout's absolute server entrypoint; verify listener ownership and process creation time before reusing or stopping it, leaving unrelated Node servers alone
 - **Translator**: stop emitting literal `<think>` / `</think>` as OpenAI `delta.content` on Claude streams — thinking stays on `reasoning_content` only (upstream #4063)
 - **Translator**: keep Responses `function_call_output` images as image parts instead of JSON-stringifying base64 into the tool message (upstream #4058)
