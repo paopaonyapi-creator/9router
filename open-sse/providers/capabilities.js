@@ -141,6 +141,8 @@ export const MODEL_CAPABILITIES = {
   // via OpenAI Responses input_image; reasoning supports up to xhigh.
   "muse-spark-1.2-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
   "muse-spark-1.3-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
+  // OpenCode Free Union Alpha — multimodal (text+vision), 262K context, 131K max output
+  "union-alpha": { vision: true, contextWindow: 262144, maxOutput: 131072 },
 };
 
 const KIRO_GPT_5_6_CAPABILITIES = { vision: true, reasoning: true, search: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 272000, maxOutput: 128000 };
@@ -238,6 +240,13 @@ export const PROVIDER_CAPABILITIES = {
     // contract). maxOutput 128000 per the server's product-config payload.
     "deepseek-v4.1-flash": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 128000 },
   },
+  // CodeBuddy intl — same gateway catalog as CN, so deepseek-v4.1-flash mirrors
+  // the codebuddy-cn entry (the openai-style reasoning_effort format matters:
+  // the generic *deepseek-v4* pattern would otherwise pick the vendor-native
+  // "deepseek" thinking shape, which the CodeBuddy gateway does not accept).
+  "codebuddy-intl": {
+    "deepseek-v4.1-flash": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 128000 },
+  },
   // Qoder — upstream exposes opaque internal ids (dfmodel, kmodel, …); the
   // registry `name` is display-only and capability lookup matches on the raw
   // id, so every qoder model would fall through to DEFAULT_CAPABILITIES
@@ -274,6 +283,16 @@ export const PROVIDER_CAPABILITIES = {
   "poolside": {
     "laguna-s-2.1":  { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 32000 },
     "laguna-xs-2.1": { reasoning: true, thinkingFormat: "openai", contextWindow: 200000, maxOutput: 32000 },
+  },
+  // Ollama Cloud — the generic *deepseek-v4* pattern misses the vision badge
+  // the library page publishes for this model (text+image in, 1M context).
+  // ponytail: thinkingFormat stays "deepseek" to preserve today's body shape;
+  // Ollama's native toggle is the top-level `think` field (bool or
+  // low/medium/high/max), which no format in thinkingUnified.js emits yet —
+  // openai-to-ollama.js drops it. Wire a "think" format when thinking on
+  // Ollama Cloud is actually needed.
+  "ollama": {
+    "deepseek-v4.1-flash:cloud": { vision: true, reasoning: true, thinkingFormat: "deepseek", contextWindow: 1000000, maxOutput: 384000 },
   },
 };
 
@@ -382,10 +401,10 @@ export const PATTERN_CAPABILITIES = [
   { pattern: "*glm*",           caps: { reasoning: true, thinkingFormat: "zai", contextWindow: 200000 } },
 
   // ── DeepSeek (thinking.enabled + reasoning_effort; r1 = thinking-only) ─
-  // v4.1 has real image input (probed live on Alibaba MaaS: correct color
+  // v4.1+ has real image input (probed live on Alibaba MaaS: correct color
   // read from a PNG). v4-pro / v4-flash-0731 accept image blocks but ignore
-  // them (answered "Unknown"), so vision stays scoped to v4.1.
-  { pattern: "*deepseek-v4.1*", caps: { vision: true, reasoning: true, thinkingFormat: "deepseek", thinkingEffortSupported: true, contextWindow: 1000000, maxOutput: 128000 } },
+  // them (answered "Unknown"), so vision stays scoped to v4.* dotted releases.
+  { pattern: "*deepseek-v4.*",  caps: { vision: true, reasoning: true, thinkingFormat: "deepseek", thinkingEffortSupported: true, contextWindow: 1000000, maxOutput: 128000 } },
   { pattern: "*deepseek-v4*",   caps: { reasoning: true, thinkingFormat: "deepseek", thinkingEffortSupported: true, contextWindow: 1000000, maxOutput: 384000 } },
   { pattern: "*reasoner*",      caps: { reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 128000 } },
   { pattern: "*deepseek-r*",    caps: { reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 128000 } },
@@ -501,11 +520,65 @@ function refine(base, provider, model) {
   return result;
 }
 
+// Mirrors Command Code CLI `isKnownTextOnlyModel` (no image input). New models
+// default to vision; only this denylist stays text-only.
+const COMMANDCODE_TEXT_ONLY = new Set([
+  "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4-flash",
+  "deepseek/deepseek-v4-flash-fast",
+  "zai-org/glm-5.3",
+  "zai-org/glm-5.2",
+  "zai-org/glm-5.2-fast",
+  "zai-org/glm-5.1",
+  "zai-org/glm-5",
+  "minimaxai/minimax-m2.7",
+  "minimax/minimax-m2.7-free",
+  "minimaxai/minimax-m2.5",
+  "xiaomi/mimo-v2.5-pro",
+  "qwen/qwen3.6-max-preview",
+  "qwen/qwen3.7-max",
+  "meituan/longcat-2.0:free",
+  "stepfun/step-3.5-flash",
+  "tencent/hy4-preview",
+  "tencent/hy3",
+  "tencent/hy3-paid",
+  "nvidia/nemotron-3-ultra-550b-a55b",
+  "poolside/laguna-s-2.1-free",
+  "inclusionai/ling-3.0-flash-free",
+  "inclusionai/ling-3.0-flash-sante:free",
+]);
+
+function isCommandCodeTextOnly(model) {
+  const key = String(model || "").toLowerCase();
+  if (COMMANDCODE_TEXT_ONLY.has(key)) return true;
+  for (const id of COMMANDCODE_TEXT_ONLY) {
+    const base = id.includes("/") ? id.slice(id.lastIndexOf("/") + 1) : id;
+    if (key === base || key.endsWith("/" + base)) return true;
+  }
+  return false;
+}
 export function getCapabilitiesForModel(provider, model) {
   if (!model) return { ...DEFAULT_CAPABILITIES };
 
   // Canonical exact lookup strips vendor prefix: "anthropic/claude-opus-4.7" -> "claude-opus-4.7".
   const baseModel = model.includes("/") ? model.split("/").pop() : model;
+
+  // CommandCode wire is /alpha/generate for every model. Family patterns
+  // (deepseek-v4 → thinkingFormat:deepseek, vision:false) must not win here.
+  if (provider === "commandcode" || provider === "cmc") {
+    const providerCaps = PROVIDER_CAPABILITIES.commandcode;
+    if (providerCaps?.[model]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[model] };
+    if (providerCaps?.[baseModel]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[baseModel] };
+    return {
+      ...DEFAULT_CAPABILITIES,
+      reasoning: true,
+      thinkingFormat: "commandcode",
+      thinkingEffortSupported: true,
+      vision: !isCommandCodeTextOnly(model),
+      contextWindow: 1000000,
+      maxOutput: 384000,
+    };
+  }
 
   // 1. Provider-specific override
   if (provider) {
