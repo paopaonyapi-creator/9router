@@ -57,6 +57,12 @@
 ## Dependencies
 - monaco-editor `^0.56.0`, better-sqlite3 `^13.0.3` (optional), pin `dompurify`
   override to `^3.4.14`
+- Resolved in-range after the v0.5.86 merge: next/`@next/third-parties` 16.3.6,
+  marked 18.0.14, and transitive `qs` 6.16.0 — clears the moderate `qs`
+  bracket-key array-limit bypass advisory. `package-lock.json` is gitignored
+  here, so these are local resolutions, not committed pins; a fresh install
+  picks them up from the existing ranges. React stays at upstream's exact
+  19.2.4 pin (19.3.0 carries no advisory and would diverge from upstream).
 - Patch bumps in-range: next/`@next/third-parties` `^16.3.5`, jose `^6.2.12`,
   marked `^18.0.13`, undici `^7.29.1`, `@xyflow/react` `^12.11.6`, open `^11.0.4`,
   postcss `^8.5.28`
