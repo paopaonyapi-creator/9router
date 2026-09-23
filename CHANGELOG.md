@@ -9,6 +9,7 @@
   On Windows create desktop `.lnk` shortcuts pointing at either script.
 
 ## Sync
+- Merged upstream decolua/9router **v0.5.85 → v0.5.86** — Xiaomi MiMo server-assisted desktop login with five account clusters and v2.6 models, Claude Opus 5.5, i18n characterData mutation observer, lossless proxy-pool header forwarding through Vercel/Cloudflare/Deno relays, and MiMo login-session hardening (httpOnly cookie only, dashboard auth on the proxy branch). Pao branding, port 20128, ownership-safe launcher, and the post-v0.5.81 translator fixes remain in place.
 - Merged upstream decolua/9router **v0.5.81 → v0.5.85** — OpenCode Zen and System One, Qoder CN and replay protection, Cursor transport fixes, model capability metadata, combo presets, usage analytics, Antigravity quota fixes, and verified multi-platform Docker publishing. Pao branding, port 20128, ownership-safe launcher, and post-v0.5.81 translator regressions remain in place.
 - Merged upstream decolua/9router **v0.5.75 → v0.5.81** — OpenCode session and free-tier fixes, Kiro tool/image fidelity, in-band stream aborts, CommandCode retries and usage, Zed OAuth hardening, Antigravity isolation, Codex routing, and DeepSeek V4.1 Flash support. Pao branding, port 20128, launcher ownership, and local stream safeguards remain in place.
 - Merged upstream decolua/9router **v0.5.56 → v0.5.75** (120 commits) — Kiro
@@ -61,6 +62,12 @@
   postcss `^8.5.28`
 
 ## Tests
+- **Claude**: pin the Claude Code version expectations to upstream's `2.1.280`
+  bump — v0.5.86 raised `CLAUDE_CLI_VERSION` without updating
+  `claude-cloaking` / `claude-header-forwarding` or `providers-baseline.json`
+- **xAI OAuth**: give the two dashboard-auth cases a 20s budget; they cold-import
+  the whole `open-sse` engine after `vi.resetModules()` (~7s here), which blew the
+  5s default and reported as a regression on a full-suite run
 - **Kiro**: update golden/direct-route expectations after removal of legacy wire fields; verify system/thinking content and frozen first-turn replay with fresh current-turn timestamps
 - **Baseline**: detect failed suites (import, collection, and cleanup errors) even when no assertion failed; compare normalized error diagnostics so a new failure in a previously failing file is rejected
 - **Desktop**: exercise configured ports, start/stop reuse, foreign-process protection and process identity checks using isolated Windows fixture servers
@@ -71,6 +78,17 @@
 - **Security audit**: source-grep audits resolve repo files from the test file's
   location instead of the process cwd — running vitest from `tests/` vs the repo
   root no longer decides pass/fail on its own
+
+# v0.5.86 (2026-09-23)
+
+## Features
+- **Xiaomi MiMo**: server-assisted desktop login for headless/Docker deployments, five account clusters (cn/sgp/ams/ru/in), and v2.6 pro/flash/pro-ultraspeed models with dual-route (account service vs. cloud API)
+- **Claude**: add Claude Opus 5.5 support
+- **i18n**: translate React text rewrites via characterData mutation observer
+
+## Fixes
+- **Proxy Pools**: keep request headers intact through Vercel/Cloudflare/Deno relays (spreading a `Headers` instance yielded `{}`, dropping auth and content-type)
+- **Xiaomi MiMo login**: keep the session in the httpOnly cookie only, require dashboard auth on the proxy branch, and stop forwarding authorization headers upstream
 
 # v0.5.85 (2026-09-22)
 

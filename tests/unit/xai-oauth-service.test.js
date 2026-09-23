@@ -63,6 +63,8 @@ describe("xai/oauth service", () => {
     expect(parsed.searchParams.get("referrer")).toBe("cli-proxy-api");
   });
 
+  // The two cases below re-import src/lib/oauth/providers.js after vi.resetModules(),
+  // which cold-loads the whole open-sse engine (~7s here) — well past the 5s default.
   it("generates dashboard auth data with CLIProxyAPI PKCE size and discovered endpoints", async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -82,7 +84,7 @@ describe("xai/oauth service", () => {
     expect(parsed.searchParams.get("code_challenge_method")).toBe("S256");
     expect(parsed.searchParams.get("plan")).toBe("generic");
     expect(parsed.searchParams.get("referrer")).toBe("cli-proxy-api");
-  });
+  }, 20000);
 
   it("exchanges dashboard codes against the discovered xAI token endpoint", async () => {
     const fetchMock = fetch;
@@ -121,5 +123,5 @@ describe("xai/oauth service", () => {
       refreshToken: "refresh-token",
       expiresIn: 3600,
     });
-  });
+  }, 20000);
 });
