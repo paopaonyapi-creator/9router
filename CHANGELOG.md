@@ -60,9 +60,12 @@
 - Resolved in-range after the v0.5.86 merge: next/`@next/third-parties` 16.3.6,
   marked 18.0.14, and transitive `qs` 6.16.0 — clears the moderate `qs`
   bracket-key array-limit bypass advisory. `package-lock.json` is gitignored
-  here, so these are local resolutions, not committed pins; a fresh install
-  picks them up from the existing ranges. React stays at upstream's exact
-  19.2.4 pin (19.3.0 carries no advisory and would diverge from upstream).
+  here, so those three are local resolutions a fresh install rediscovers from
+  the existing ranges.
+- Committed pins ahead of upstream: react/react-dom `19.3.0` (was `19.2.4`) and
+  eslint-config-next `16.3.6` (was `16.1.6`, now matching next). Upstream pins
+  these exactly, so a later merge touching the same lines will conflict — keep
+  the newer version when it does.
 - Patch bumps in-range: next/`@next/third-parties` `^16.3.5`, jose `^6.2.12`,
   marked `^18.0.13`, undici `^7.29.1`, `@xyflow/react` `^12.11.6`, open `^11.0.4`,
   postcss `^8.5.28`
