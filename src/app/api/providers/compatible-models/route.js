@@ -1,21 +1,9 @@
 import { NextResponse } from "next/server";
 import { getProviderNodeById } from "@/models";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
+import { parseModels } from "@/shared/utils/compatibleModels.js";
 
 const FETCH_TIMEOUT_MS = 10000;
-
-function parseModels(data) {
-  const raw = Array.isArray(data) ? data : data?.data || data?.models || [];
-  const out = [];
-  const seen = new Set();
-  for (const m of raw) {
-    const id = m?.id || m?.name || m?.model;
-    if (typeof id !== "string" || !id.trim() || seen.has(id)) continue;
-    seen.add(id);
-    out.push({ id, name: m?.display_name || m?.displayName || m?.name || id });
-  }
-  return out;
-}
 
 // POST /api/providers/compatible-models — list models for a compatible node
 // using a not-yet-saved API key (used by the connection modals' model picker).

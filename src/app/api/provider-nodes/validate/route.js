@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertPublicUrl } from "@/shared/utils/ssrfGuard.js";
 import { isLocalRequest } from "@/dashboardGuard";
+import { parseModels } from "@/shared/utils/compatibleModels.js";
 
 // Fetch with timeout wrapper
 const fetchWithTimeout = (url, options, timeout = 10000) => {
@@ -122,7 +123,10 @@ export async function POST(request) {
         }
       });
 
-      if (res.ok) return NextResponse.json({ valid: true });
+      if (res.ok) {
+        const models = parseModels(await res.json().catch(() => null));
+        return NextResponse.json({ valid: true, method: "models", models });
+      }
 
       // Auth errors - no point trying chat fallback
       if (res.status === 401 || res.status === 403) {
@@ -164,7 +168,10 @@ export async function POST(request) {
       headers: { "Authorization": `Bearer ${apiKey}` },
     });
 
-    if (res.ok) return NextResponse.json({ valid: true });
+    if (res.ok) {
+      const models = parseModels(await res.json().catch(() => null));
+      return NextResponse.json({ valid: true, method: "models", models });
+    }
 
     // Auth errors - no point trying chat fallback
     if (res.status === 401 || res.status === 403) {

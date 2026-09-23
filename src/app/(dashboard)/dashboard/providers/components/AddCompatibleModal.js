@@ -29,6 +29,9 @@ const VARIANT_CONFIG = {
   },
 };
 
+// Big catalogs (OpenRouter-style) would otherwise fill the modal.
+const MODEL_CHIP_LIMIT = 12;
+
 const API_TYPE_OPTIONS = [
   { value: "chat", label: "Chat Completions" },
   { value: "responses", label: "Responses API" },
@@ -114,15 +117,45 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
 
   const renderValidationResult = () => {
     if (!validationResult) return null;
-    const { valid, error, method } = validationResult;
+    const { valid, error, method, models } = validationResult;
     if (valid) {
+      const list = Array.isArray(models) ? models : [];
+      const shown = list.slice(0, MODEL_CHIP_LIMIT);
       return (
-        <>
-          <Badge variant="success">Valid</Badge>
-          {method === "chat" && (
-            <span className="text-sm text-text-muted">(via inference test)</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="success">Valid</Badge>
+            {method === "chat" && (
+              <span className="text-sm text-text-muted">(via inference test)</span>
+            )}
+            {list.length > 0 && (
+              <span className="text-xs text-text-muted">
+                {list.length} {list.length === 1 ? "model" : "models"} detected
+              </span>
+            )}
+          </div>
+          {shown.length > 0 && (
+            <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+              {shown.map((m) => (
+                <span
+                  key={m.id}
+                  title={m.name}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs text-text-muted"
+                >
+                  <span className="font-mono">{m.id}</span>
+                  {m.name && m.name !== m.id ? (
+                    <span className="max-w-[140px] truncate italic opacity-70">{m.name}</span>
+                  ) : null}
+                </span>
+              ))}
+              {list.length > shown.length && (
+                <span className="self-center text-xs text-text-muted">
+                  +{list.length - shown.length} more
+                </span>
+              )}
+            </div>
           )}
-        </>
+        </div>
       );
     }
     return (

@@ -7,6 +7,12 @@
   browser, and is a no-op when already running; `scripts/stop-9router.ps1`
   stops the node process on the port (never touches foreign processes).
   On Windows create desktop `.lnk` shortcuts pointing at either script.
+- **Providers**: the compatible-node **Check** button now lists the models it
+  found. `provider-nodes/validate` was already fetching the node's `/models` and
+  throwing the body away — it returns `method: "models"` with the parsed catalog,
+  and the Add OpenAI/Anthropic Compatible dialog renders a count plus one chip per
+  model id, so a freshly checked node shows its models the way the built-in
+  catalogs do. Importing stays a deliberate click on the provider page.
 
 ## Sync
 - Merged upstream decolua/9router **v0.5.85 → v0.5.86** — Xiaomi MiMo server-assisted desktop login with five account clusters and v2.6 models, Claude Opus 5.5, i18n characterData mutation observer, lossless proxy-pool header forwarding through Vercel/Cloudflare/Deno relays, and MiMo login-session hardening (httpOnly cookie only, dashboard auth on the proxy branch). Pao branding, port 20128, ownership-safe launcher, and the post-v0.5.81 translator fixes remain in place.
