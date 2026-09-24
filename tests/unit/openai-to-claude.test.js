@@ -189,7 +189,10 @@ describe("openaiToClaudeResponse", () => {
               })
             }
           }]
-        }
+        },
+        // Args are buffered per turn and sanitized on finish, so the flush only
+        // happens once the upstream sends a terminal finish_reason.
+        finish_reason: "tool_calls"
       }]
     };
 

@@ -128,6 +128,32 @@
   headers, the empty unary body, client teardown, the 5-minute cache, fail-open on
   both an error status and a transport error, and the no-credentials skip. 5 cases in
   50ms with no network.
+- **Stale baselines cleared**: the 10 assertion failures the gate was masking are all
+  gone, and none of them was a product bug — every one was a test left behind by a
+  source change. `oauth-cursor-auto-import.test.js` was written against an older
+  route (`.all()` rows, fuzzy `LIKE` matching, a `Please login to Cursor IDE first`
+  error, a single hardcoded linux path, 400 for unknown platforms) and is rewritten
+  onto the current contract: probed-path listing in the not-found message, win32
+  `APPDATA`/`LOCALAPPDATA` candidates, the linux `which cursor` install gate, and the
+  sqlite3-CLI token strategy (exact keys, alternate-key fallback, JSON-string
+  unwrapping, manual-paste degradation). `claude-header-forwarding` asserted
+  got-scraping JA3 routing that `proxyFetch.js` deliberately keeps commented out.
+  `openai-to-claude` expected an `input_json_delta` on a chunk with no
+  `finish_reason`, but args are buffered and sanitized on flush.
+- **Baseline tightened, not widened**: with all 24 `known-fails.txt` entries verified
+  passing (including `rtk` and `translator-request-normalization`, which were already
+  fixed by earlier translator work), the file is emptied and `current-run.json`
+  re-snapshotted from a clean run. That restores the gate's ability to catch a
+  regression in those five files; only the 8 environment-bound suite errors
+  (`node:test` files vitest cannot collect, `$env:TEMP` EPERM, absent `lowdb`, absent
+  `cloud/`) stay accepted. Verified still strict by injecting a fake assertion failure
+  into a copy of the report — the gate rejects it and exits 1.
+- **Cursor auto-import on Windows**: strategy 1 opens the db with a bare
+  `require("better-sqlite3")`, which only resolves inside Next's webpack runtime, so
+  under vitest the route always degrades to the sqlite3-CLI strategy. On this machine
+  `better-sqlite3`'s `node-gyp rebuild` is also outside the allow-scripts list, so
+  Cursor auto-import lands on the manual-paste response unless the native binding is
+  approved and built.
 
 # v0.5.86 (2026-09-23)
 

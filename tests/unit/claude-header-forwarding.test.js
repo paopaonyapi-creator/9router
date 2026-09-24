@@ -236,22 +236,27 @@ describe("proxyAwareFetch — api.anthropic.com routing", () => {
     vi.restoreAllMocks();
   });
 
-  it("routes api.anthropic.com to gotScraping (non-streaming) and returns ok response", async () => {
-    // Mock got-scraping before module load
-    vi.doMock("got-scraping", () => {
-      const mockGotScraping = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        statusMessage: "OK",
-        headers: { "content-type": "application/json" },
-        rawBody: Buffer.from(JSON.stringify({ id: "msg_test" })),
-      });
-      mockGotScraping.stream = vi.fn();
-      return { gotScraping: mockGotScraping };
+  it("serves api.anthropic.com non-streaming through native fetch (JA3 spoofing disabled)", async () => {
+    // proxyFetch.js keeps the whole got-scraping block commented out on purpose
+    // ("Disabled: not in use"), and got-scraping is not a dependency — so Anthropic
+    // rides the same native path as every other host. Pin that contract so a future
+    // re-enable of the JA3 block has to update this test deliberately.
+    const originalFetch = globalThis.fetch;
+    // proxyFetch patches globalThis.fetch on import, so keep a handle on the mock —
+    // after the import the global points at the wrapper, not at this spy.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: new Headers({ "content-type": "application/json" }),
+      body: null,
+      text: async () => JSON.stringify({ id: "msg_test" }),
+      json: async () => ({ id: "msg_test" }),
     });
+    globalThis.fetch = fetchMock;
 
     vi.resetModules();
     const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-    const { gotScraping } = await import("got-scraping");
 
     const res = await proxyAwareFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -260,11 +265,11 @@ describe("proxyAwareFetch — api.anthropic.com routing", () => {
       body: JSON.stringify({ model: "claude-3-5-sonnet-20241022", messages: [] }),
     });
 
-    expect(gotScraping).toHaveBeenCalledOnce();
     expect(res.ok).toBe(true);
     expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.id).toBe("msg_test");
+    expect(await res.json()).toEqual({ id: "msg_test" });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    globalThis.fetch = originalFetch;
   });
 
   it("falls back gracefully when got-scraping throws on non-streaming path", async () => {
