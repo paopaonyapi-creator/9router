@@ -60,13 +60,6 @@ export default function DeepSeekTuiToolCard({
     if (initialStatus) setDeepseekStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!deepseekStatus) checkStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -76,14 +69,6 @@ export default function DeepSeekTuiToolCard({
       console.log("Error fetching model aliases:", error);
     }
   };
-
-  useEffect(() => {
-    if (deepseekStatus?.installed && !hasInitializedModel.current) {
-      hasInitializedModel.current = true;
-      const openaiSection = deepseekStatus.settings?.["providers.openai"];
-      if (openaiSection?.model) setSelectedModel(openaiSection.model);
-    }
-  }, [deepseekStatus]);
 
   const checkStatus = async () => {
     setChecking(true);
@@ -97,6 +82,21 @@ export default function DeepSeekTuiToolCard({
       setChecking(false);
     }
   };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!deepseekStatus) checkStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (deepseekStatus?.installed && !hasInitializedModel.current) {
+      hasInitializedModel.current = true;
+      const openaiSection = deepseekStatus.settings?.["providers.openai"];
+      if (openaiSection?.model) setSelectedModel(openaiSection.model);
+    }
+  }, [deepseekStatus]);
 
   const normalizeLocalhost = (url) => url.replace("://localhost", "://127.0.0.1");
 

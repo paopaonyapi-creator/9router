@@ -67,6 +67,36 @@ export default function CombosPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const { copied, copy } = useCopyToClipboard();
 
+  const fetchData = async () => {
+    try {
+      const [combosRes, providersRes, settingsRes] = await Promise.all([
+        fetch("/api/combos"),
+        fetch("/api/providers"),
+        fetch("/api/settings"),
+      ]);
+      const combosData = await combosRes.json();
+      const providersData = await providersRes.json();
+      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+
+      // Only LLM combos here - webSearch/webFetch combos belong to media-providers/web
+      if (combosRes.ok) setCombos((combosData.combos || []).filter(c => !c.kind || c.kind === "llm"));
+      if (providersRes.ok) {
+        setActiveProviders(providersData.connections || []);
+      }
+      setComboStrategies(settingsData.comboStrategies || {});
+      const rawAdapter = settingsData.capacityAdapter || {};
+      const normalized = {};
+      for (const cap of CAPACITY_ADAPTER_CAPS) {
+        normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key]);
+      }
+      setCapacityAdapter(normalized);
+    } catch (error) {
+      console.log("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -150,36 +180,6 @@ export default function CombosPage() {
       alert(`Failed to preview ${label}`);
     } finally {
       setPresetLoading(null);
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      const [combosRes, providersRes, settingsRes] = await Promise.all([
-        fetch("/api/combos"),
-        fetch("/api/providers"),
-        fetch("/api/settings"),
-      ]);
-      const combosData = await combosRes.json();
-      const providersData = await providersRes.json();
-      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
-
-      // Only LLM combos here - webSearch/webFetch combos belong to media-providers/web
-      if (combosRes.ok) setCombos((combosData.combos || []).filter(c => !c.kind || c.kind === "llm"));
-      if (providersRes.ok) {
-        setActiveProviders(providersData.connections || []);
-      }
-      setComboStrategies(settingsData.comboStrategies || {});
-      const rawAdapter = settingsData.capacityAdapter || {};
-      const normalized = {};
-      for (const cap of CAPACITY_ADAPTER_CAPS) {
-        normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key]);
-      }
-      setCapacityAdapter(normalized);
-    } catch (error) {
-      console.log("Error fetching data:", error);
-    } finally {
-      setLoading(false);
     }
   };
 

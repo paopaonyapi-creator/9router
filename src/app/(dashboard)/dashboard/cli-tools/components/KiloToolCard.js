@@ -30,13 +30,6 @@ export default function KiloToolCard({ tool, isExpanded, onToggle, baseUrl, apiK
     if (initialStatus) setStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!status) checkStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -73,6 +66,13 @@ export default function KiloToolCard({ tool, isExpanded, onToggle, baseUrl, apiK
       setChecking(false);
     }
   };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!status) checkStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
 
   const handleApply = async () => {
     setApplying(true);

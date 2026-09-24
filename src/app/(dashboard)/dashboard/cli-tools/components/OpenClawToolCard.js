@@ -59,13 +59,6 @@ export default function OpenClawToolCard({
     if (initialStatus) setOpenclawStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!openclawStatus) checkOpenclawStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -75,6 +68,26 @@ export default function OpenClawToolCard({
       console.log("Error fetching model aliases:", error);
     }
   };
+
+  const checkOpenclawStatus = async () => {
+    setCheckingOpenclaw(true);
+    try {
+      const res = await fetch("/api/cli-tools/openclaw-settings");
+      const data = await res.json();
+      setOpenclawStatus(data);
+    } catch (error) {
+      setOpenclawStatus({ installed: false, error: error.message });
+    } finally {
+      setCheckingOpenclaw(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!openclawStatus) checkOpenclawStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
 
   useEffect(() => {
     if (openclawStatus?.installed && !hasInitializedModel.current) {
@@ -96,19 +109,6 @@ export default function OpenClawToolCard({
       setAgentModels(initAgentModels);
     }
   }, [openclawStatus, apiKeys]);
-
-  const checkOpenclawStatus = async () => {
-    setCheckingOpenclaw(true);
-    try {
-      const res = await fetch("/api/cli-tools/openclaw-settings");
-      const data = await res.json();
-      setOpenclawStatus(data);
-    } catch (error) {
-      setOpenclawStatus({ installed: false, error: error.message });
-    } finally {
-      setCheckingOpenclaw(false);
-    }
-  };
 
   const normalizeLocalhost = (url) => url.replace("://localhost", "://127.0.0.1");
 

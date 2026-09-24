@@ -61,6 +61,19 @@ export default function CoworkToolCard({
     if (initialStatus) setStatus(initialStatus);
   }, [initialStatus]);
 
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const res = await fetch(ENDPOINT);
+      const data = await res.json();
+      setStatus(data);
+    } catch (error) {
+      setStatus({ installed: false, error: error.message });
+    } finally {
+      setChecking(false);
+    }
+  };
+
   useEffect(() => {
     if (isExpanded && !status) checkStatus();
   }, [isExpanded]);
@@ -95,19 +108,6 @@ export default function CoworkToolCard({
       setCustomPlugins(status.cowork.customPlugins);
     }
   }, [status]);
-
-  const checkStatus = async () => {
-    setChecking(true);
-    try {
-      const res = await fetch(ENDPOINT);
-      const data = await res.json();
-      setStatus(data);
-    } catch (error) {
-      setStatus({ installed: false, error: error.message });
-    } finally {
-      setChecking(false);
-    }
-  };
 
   const getEffectiveBaseUrl = () => ensureV1(customBaseUrl);
 

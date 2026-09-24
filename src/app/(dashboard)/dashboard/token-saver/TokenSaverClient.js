@@ -72,14 +72,6 @@ export default function TokenSaverClient() {
     ? CAVEMAN_LEVELS
     : CAVEMAN_LEVELS.filter((lvl) => !lvl.wenyan);
 
-  useEffect(() => {
-    const current = CAVEMAN_LEVELS.find((lvl) => lvl.id === cavemanLevel);
-    if (current?.wenyan && !isWenyanLocale) {
-      setCavemanLevel("ultra");
-      patchSetting({ cavemanLevel: "ultra" });
-    }
-  }, [isWenyanLocale, cavemanLevel]);
-
   const patchSetting = async (patch) => {
     try {
       await fetch("/api/settings", {
@@ -91,6 +83,14 @@ export default function TokenSaverClient() {
       console.log("Error updating setting:", error);
     }
   };
+
+  useEffect(() => {
+    const current = CAVEMAN_LEVELS.find((lvl) => lvl.id === cavemanLevel);
+    if (current?.wenyan && !isWenyanLocale) {
+      setCavemanLevel("ultra");
+      patchSetting({ cavemanLevel: "ultra" });
+    }
+  }, [isWenyanLocale, cavemanLevel]);
 
   const handleRtkEnabled = async (value) => {
     try {

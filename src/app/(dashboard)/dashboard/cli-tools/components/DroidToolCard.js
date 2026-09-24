@@ -62,13 +62,6 @@ export default function DroidToolCard({
     if (initialStatus) setDroidStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!droidStatus) checkDroidStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -78,6 +71,26 @@ export default function DroidToolCard({
       console.log("Error fetching model aliases:", error);
     }
   };
+
+  const checkDroidStatus = async () => {
+    setCheckingDroid(true);
+    try {
+      const res = await fetch("/api/cli-tools/droid-settings");
+      const data = await res.json();
+      setDroidStatus(data);
+    } catch (error) {
+      setDroidStatus({ installed: false, error: error.message });
+    } finally {
+      setCheckingDroid(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!droidStatus) checkDroidStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
 
   // Pre-fill model list from existing config (supports multi-model)
   useEffect(() => {
@@ -98,19 +111,6 @@ export default function DroidToolCard({
       }
     }
   }, [droidStatus]);
-
-  const checkDroidStatus = async () => {
-    setCheckingDroid(true);
-    try {
-      const res = await fetch("/api/cli-tools/droid-settings");
-      const data = await res.json();
-      setDroidStatus(data);
-    } catch (error) {
-      setDroidStatus({ installed: false, error: error.message });
-    } finally {
-      setCheckingDroid(false);
-    }
-  };
 
   const getEffectiveBaseUrl = () => {
     const url = customBaseUrl || baseUrl;

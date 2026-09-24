@@ -14,13 +14,6 @@ export default function MitmPageClient() {
   const [expandedTool, setExpandedTool] = useState(null);
   const [mitmStatus, setMitmStatus] = useState({ running: false, certExists: false, dnsStatus: {}, hasCachedPassword: false });
 
-  useEffect(() => {
-    fetchConnections();
-    fetchApiKeys();
-    fetchAliases();
-    fetchCloudSettings();
-  }, []);
-
   const fetchConnections = async () => {
     try {
       const res = await fetch("/api/providers");
@@ -60,6 +53,13 @@ export default function MitmPageClient() {
       }
     } catch { /* ignore */ }
   };
+
+  useEffect(() => {
+    fetchConnections();
+    fetchApiKeys();
+    fetchAliases();
+    fetchCloudSettings();
+  }, []);
 
   const getActiveProviders = () => connections.filter(c => c.isActive !== false);
 

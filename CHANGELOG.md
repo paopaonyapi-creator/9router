@@ -1,3 +1,21 @@
+# Unreleased
+
+## Fixes
+- **Dashboard**: clear all 39 `react-hooks/immutability` violations by reordering
+  declarations only. Every one was the same shape — a `useEffect` calling `const`
+  helper functions declared further down the component body, which only survives
+  because effect callbacks run after render. Where moving the hook down would have
+  crossed another hook, the helpers were lifted above it instead, so no hook call
+  order changed anywhere. Verified mechanically: for all 21 files the multiset of
+  source lines is identical to before (pure permutation, no edits) and the ordered
+  sequence of `use*(` calls matches `HEAD` exactly.
+- **Lint**: `react-hooks/immutability` is back to `error` — it is removed from the
+  `REACT_HOOKS_DEBT` map now that it is clean, so it cannot silently regress. The
+  remaining downgrades are `set-state-in-effect`, `purity` and `refs`. Reordering
+  surfaced 20 `set-state-in-effect` warnings that the rule previously could not see
+  through the forward references (89 → 109): same underlying debt, now reported by the
+  rule that can actually describe it. Total warnings 343 → 324, errors still 0.
+
 # v0.5.87 (2026-09-25)
 
 ## Features

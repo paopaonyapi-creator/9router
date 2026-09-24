@@ -100,62 +100,6 @@ export default function APIPageClient({ machineId }) {
     if (tsLogRef.current) tsLogRef.current.scrollTop = tsLogRef.current.scrollHeight;
   }, [tsInstallLog]);
 
-  useEffect(() => {
-    fetchData();
-    loadSettings();
-  }, []);
-
-  // Status poll: only while degraded (not yet reachable). Stop once healthy to avoid spam.
-  // Visibility re-check: refresh once when tab becomes visible.
-  useEffect(() => {
-    const anyEnabled = tunnelEnabled || tsEnabled;
-    if (!anyEnabled) return;
-    const tunnelHealthy = !tunnelEnabled || tunnelReachable;
-    const tsHealthy = !tsEnabled || tsReachable;
-    const allHealthy = tunnelHealthy && tsHealthy;
-    const onVisible = () => { if (!document.hidden) syncTunnelStatus(); };
-    document.addEventListener("visibilitychange", onVisible);
-    if (allHealthy) return () => document.removeEventListener("visibilitychange", onVisible);
-    const timer = setInterval(() => { if (!document.hidden) syncTunnelStatus(); }, STATUS_POLL_FAST_MS);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [tunnelEnabled, tsEnabled, tunnelReachable, tsReachable]);
-
-  // Browser-side periodic ping: probes tunnel/tailscale URLs directly so UI stays
-  // "reachable" even when backend DNS (1.1.1.1) hiccups on *.ts.net or *.trycloudflare.com.
-  // Adaptive: slow when healthy, fast when degraded; pause when tab hidden.
-  useEffect(() => {
-    const probeBoth = async () => {
-      if (document.hidden) return;
-      if (tunnelEnabled && (tunnelUrl || tunnelPublicUrl)) {
-        const ok = await clientPingAny(tunnelPublicUrl, tunnelUrl);
-        tunnelClientReachableRef.current = ok;
-        if (ok) { tunnelMissRef.current = 0; setTunnelReachable(true); if (!tunnelEverReachableRef.current) { tunnelEverReachableRef.current = true; setTunnelEverReachable(true); } }
-        else { tunnelMissRef.current += 1; if (tunnelMissRef.current >= REACHABLE_MISS_THRESHOLD) setTunnelReachable(false); }
-      } else {
-        tunnelClientReachableRef.current = false;
-      }
-      if (tsEnabled && tsUrl) {
-        const ok = await clientPingUrl(tsUrl);
-        tsClientReachableRef.current = ok;
-        if (ok) { tsMissRef.current = 0; setTsReachable(true); if (!tsEverReachableRef.current) { tsEverReachableRef.current = true; setTsEverReachable(true); } }
-        else { tsMissRef.current += 1; if (tsMissRef.current >= REACHABLE_MISS_THRESHOLD) setTsReachable(false); }
-      } else {
-        tsClientReachableRef.current = false;
-      }
-    };
-    const anyEnabled = (tunnelEnabled && (tunnelUrl || tunnelPublicUrl)) || (tsEnabled && tsUrl);
-    if (!anyEnabled) return;
-    probeBoth();
-    const tunnelHealthy = !tunnelEnabled || tunnelReachable;
-    const tsHealthy = !tsEnabled || tsReachable;
-    if (tunnelHealthy && tsHealthy) return;
-    const id = setInterval(probeBoth, CLIENT_PING_FAST_MS);
-    return () => clearInterval(id);
-  }, [tunnelEnabled, tunnelUrl, tunnelPublicUrl, tsEnabled, tsUrl, tunnelReachable, tsReachable]);
-
   // Client-side reachable only (server no longer probes; watchdog handles backend health).
   // Miss-debounce: only flip to false after N consecutive misses.
   const updateReachable = useCallback((_unused, clientRef, missRef, setter, everRef, everSetter) => {
@@ -284,6 +228,62 @@ export default function APIPageClient({ machineId }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    loadSettings();
+  }, []);
+
+  // Status poll: only while degraded (not yet reachable). Stop once healthy to avoid spam.
+  // Visibility re-check: refresh once when tab becomes visible.
+  useEffect(() => {
+    const anyEnabled = tunnelEnabled || tsEnabled;
+    if (!anyEnabled) return;
+    const tunnelHealthy = !tunnelEnabled || tunnelReachable;
+    const tsHealthy = !tsEnabled || tsReachable;
+    const allHealthy = tunnelHealthy && tsHealthy;
+    const onVisible = () => { if (!document.hidden) syncTunnelStatus(); };
+    document.addEventListener("visibilitychange", onVisible);
+    if (allHealthy) return () => document.removeEventListener("visibilitychange", onVisible);
+    const timer = setInterval(() => { if (!document.hidden) syncTunnelStatus(); }, STATUS_POLL_FAST_MS);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [tunnelEnabled, tsEnabled, tunnelReachable, tsReachable]);
+
+  // Browser-side periodic ping: probes tunnel/tailscale URLs directly so UI stays
+  // "reachable" even when backend DNS (1.1.1.1) hiccups on *.ts.net or *.trycloudflare.com.
+  // Adaptive: slow when healthy, fast when degraded; pause when tab hidden.
+  useEffect(() => {
+    const probeBoth = async () => {
+      if (document.hidden) return;
+      if (tunnelEnabled && (tunnelUrl || tunnelPublicUrl)) {
+        const ok = await clientPingAny(tunnelPublicUrl, tunnelUrl);
+        tunnelClientReachableRef.current = ok;
+        if (ok) { tunnelMissRef.current = 0; setTunnelReachable(true); if (!tunnelEverReachableRef.current) { tunnelEverReachableRef.current = true; setTunnelEverReachable(true); } }
+        else { tunnelMissRef.current += 1; if (tunnelMissRef.current >= REACHABLE_MISS_THRESHOLD) setTunnelReachable(false); }
+      } else {
+        tunnelClientReachableRef.current = false;
+      }
+      if (tsEnabled && tsUrl) {
+        const ok = await clientPingUrl(tsUrl);
+        tsClientReachableRef.current = ok;
+        if (ok) { tsMissRef.current = 0; setTsReachable(true); if (!tsEverReachableRef.current) { tsEverReachableRef.current = true; setTsEverReachable(true); } }
+        else { tsMissRef.current += 1; if (tsMissRef.current >= REACHABLE_MISS_THRESHOLD) setTsReachable(false); }
+      } else {
+        tsClientReachableRef.current = false;
+      }
+    };
+    const anyEnabled = (tunnelEnabled && (tunnelUrl || tunnelPublicUrl)) || (tsEnabled && tsUrl);
+    if (!anyEnabled) return;
+    probeBoth();
+    const tunnelHealthy = !tunnelEnabled || tunnelReachable;
+    const tsHealthy = !tsEnabled || tsReachable;
+    if (tunnelHealthy && tsHealthy) return;
+    const id = setInterval(probeBoth, CLIENT_PING_FAST_MS);
+    return () => clearInterval(id);
+  }, [tunnelEnabled, tunnelUrl, tunnelPublicUrl, tsEnabled, tsUrl, tunnelReachable, tsReachable]);
 
   // u2500u2500u2500 Cloudflare Tunnel handlers
   // Ping tunnel health until reachable. Race multiple URLs (shortlink + direct) — 1 OK is enough.

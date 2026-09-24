@@ -2,14 +2,15 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 
 // eslint-plugin-react-hooks v7 (pulled in by eslint-config-next 16.3.6) promotes its
-// compiler-era rules to errors, and this codebase carries 136 pre-existing sites
-// across 56 files. Downgraded to warnings so `npx eslint .` is usable as a gate.
-// This reclassifies debt, it does not fix it — clear these per file and then delete
-// the map. Several purity hits are deliberate (Date.now() inside a useMemo whose deps
-// include the refresh tick) or sit in event handlers, so the rule is not always right.
+// compiler-era rules to errors, and this codebase carries pre-existing sites across
+// ~56 files. Downgraded to warnings so `npx eslint .` is usable as a gate. This
+// reclassifies debt, it does not fix it — clear these per file and drop the entry, so
+// each rule goes back to error and cannot regress. `react-hooks/immutability` is
+// already cleared (39 access-before-declare effects were reordered in v0.5.87) and is
+// deliberately no longer listed. Several purity hits are also not genuine: they are
+// Date.now() in event handlers, or in a useMemo whose deps include the refresh tick.
 const REACT_HOOKS_DEBT = [
   "react-hooks/set-state-in-effect",
-  "react-hooks/immutability",
   "react-hooks/purity",
   "react-hooks/refs",
 ];

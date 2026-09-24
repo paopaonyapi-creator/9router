@@ -30,6 +30,29 @@ export default function ClineToolCard({ tool, isExpanded, onToggle, baseUrl, api
     if (initialStatus) setStatus(initialStatus);
   }, [initialStatus]);
 
+  const fetchModelAliases = async () => {
+    try {
+      const res = await fetch("/api/models/alias");
+      const data = await res.json();
+      if (res.ok) setModelAliases(data.aliases || {});
+    } catch (error) {
+      console.log("Error fetching model aliases:", error);
+    }
+  };
+
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const res = await fetch("/api/cli-tools/cline-settings");
+      const data = await res.json();
+      setStatus(data);
+    } catch (error) {
+      setStatus({ installed: false, error: error.message });
+    } finally {
+      setChecking(false);
+    }
+  };
+
   useEffect(() => {
     if (isExpanded) {
       if (!status) checkStatus();
@@ -40,16 +63,6 @@ export default function ClineToolCard({ tool, isExpanded, onToggle, baseUrl, api
   useEffect(() => {
     if (status?.settings?.openAiModelId) setSelectedModel(status.settings.openAiModelId);
   }, [status]);
-
-  const fetchModelAliases = async () => {
-    try {
-      const res = await fetch("/api/models/alias");
-      const data = await res.json();
-      if (res.ok) setModelAliases(data.aliases || {});
-    } catch (error) {
-      console.log("Error fetching model aliases:", error);
-    }
-  };
 
   const currentBaseUrl = status?.settings?.openAiBaseUrl || "";
 
@@ -68,19 +81,6 @@ export default function ClineToolCard({ tool, isExpanded, onToggle, baseUrl, api
   };
 
   const getDisplayUrl = () => customBaseUrl || `${baseUrl}/v1`;
-
-  const checkStatus = async () => {
-    setChecking(true);
-    try {
-      const res = await fetch("/api/cli-tools/cline-settings");
-      const data = await res.json();
-      setStatus(data);
-    } catch (error) {
-      setStatus({ installed: false, error: error.message });
-    } finally {
-      setChecking(false);
-    }
-  };
 
   const handleApply = async () => {
     setApplying(true);

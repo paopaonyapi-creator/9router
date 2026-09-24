@@ -115,6 +115,30 @@ export default function ClaudeToolCard({
     setOneMContext(tool.defaultModels.some((model) => env[model.envKey]?.endsWith("[1m]")));
   }, [claudeStatus?.settings?.env, tool.defaultModels]);
 
+  const fetchModelAliases = async () => {
+    try {
+      const res = await fetch("/api/models/alias");
+      const data = await res.json();
+      if (res.ok) setModelAliases(data.aliases || {});
+    } catch (error) {
+      console.log("Error fetching model aliases:", error);
+    }
+  };
+
+  const checkClaudeStatus = async () => {
+    setCheckingClaude(true);
+    try {
+      const res = await fetch("/api/cli-tools/claude-settings");
+      const data = await res.json();
+      setClaudeStatus(data);
+      setExaMcpEnabled(!!data.exaMcpEnabled);
+    } catch (error) {
+      setClaudeStatus({ installed: false, error: error.message });
+    } finally {
+      setCheckingClaude(false);
+    }
+  };
+
   useEffect(() => {
     if (isExpanded) {
       if (!claudeStatus) checkClaudeStatus();
@@ -136,16 +160,6 @@ export default function ClaudeToolCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ccFilterNaming: value }),
     }).catch(() => {});
-  };
-
-  const fetchModelAliases = async () => {
-    try {
-      const res = await fetch("/api/models/alias");
-      const data = await res.json();
-      if (res.ok) setModelAliases(data.aliases || {});
-    } catch (error) {
-      console.log("Error fetching model aliases:", error);
-    }
   };
 
   useEffect(() => {
@@ -171,20 +185,6 @@ export default function ClaudeToolCard({
       }
     }
   }, [claudeStatus, apiKeys, tool.defaultModels, onModelMappingChange]);
-
-  const checkClaudeStatus = async () => {
-    setCheckingClaude(true);
-    try {
-      const res = await fetch("/api/cli-tools/claude-settings");
-      const data = await res.json();
-      setClaudeStatus(data);
-      setExaMcpEnabled(!!data.exaMcpEnabled);
-    } catch (error) {
-      setClaudeStatus({ installed: false, error: error.message });
-    } finally {
-      setCheckingClaude(false);
-    }
-  };
 
   const getEffectiveBaseUrl = () => {
     const url = customBaseUrl || baseUrl;

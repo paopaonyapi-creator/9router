@@ -36,6 +36,29 @@ export default function CopilotToolCard({ tool, isExpanded, onToggle, baseUrl, a
     if (initialStatus) setStatus(initialStatus);
   }, [initialStatus]);
 
+  const fetchModelAliases = async () => {
+    try {
+      const res = await fetch("/api/models/alias");
+      const data = await res.json();
+      if (res.ok) setModelAliases(data.aliases || {});
+    } catch (error) {
+      console.log("Error fetching model aliases:", error);
+    }
+  };
+
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const res = await fetch("/api/cli-tools/copilot-settings");
+      const data = await res.json();
+      setStatus(data);
+    } catch (error) {
+      setStatus({ error: error.message });
+    } finally {
+      setChecking(false);
+    }
+  };
+
   useEffect(() => {
     if (isExpanded) {
       if (!status) checkStatus();
@@ -52,16 +75,6 @@ export default function CopilotToolCard({ tool, isExpanded, onToggle, baseUrl, a
       }
     }
   }, [status]);
-
-  const fetchModelAliases = async () => {
-    try {
-      const res = await fetch("/api/models/alias");
-      const data = await res.json();
-      if (res.ok) setModelAliases(data.aliases || {});
-    } catch (error) {
-      console.log("Error fetching model aliases:", error);
-    }
-  };
 
   const saveModels = async (models) => {
     try {
@@ -97,19 +110,6 @@ export default function CopilotToolCard({ tool, isExpanded, onToggle, baseUrl, a
   const getDisplayUrl = () => customBaseUrl || `${baseUrl}/v1`;
 
   const removeModel = (id) => setSelectedModels((prev) => prev.filter((m) => m !== id));
-
-  const checkStatus = async () => {
-    setChecking(true);
-    try {
-      const res = await fetch("/api/cli-tools/copilot-settings");
-      const data = await res.json();
-      setStatus(data);
-    } catch (error) {
-      setStatus({ error: error.message });
-    } finally {
-      setChecking(false);
-    }
-  };
 
   const handleApply = async () => {
     setApplying(true);

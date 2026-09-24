@@ -34,13 +34,6 @@ export default function CodexToolCard({ tool, isExpanded, onToggle, baseUrl, api
     if (initialStatus) setCodexStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!codexStatus) checkCodexStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -50,6 +43,26 @@ export default function CodexToolCard({ tool, isExpanded, onToggle, baseUrl, api
       console.log("Error fetching model aliases:", error);
     }
   };
+
+  const checkCodexStatus = async () => {
+    setCheckingCodex(true);
+    try {
+      const res = await fetch("/api/cli-tools/codex-settings");
+      const data = await res.json();
+      setCodexStatus(data);
+    } catch (error) {
+      setCodexStatus({ installed: false, error: error.message });
+    } finally {
+      setCheckingCodex(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!codexStatus) checkCodexStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
 
   // Parse model and subagent settings from config content
   useEffect(() => {
@@ -85,19 +98,6 @@ export default function CodexToolCard({ tool, isExpanded, onToggle, baseUrl, api
   };
 
   const getDisplayUrl = () => customBaseUrl || `${baseUrl}/v1`;
-
-  const checkCodexStatus = async () => {
-    setCheckingCodex(true);
-    try {
-      const res = await fetch("/api/cli-tools/codex-settings");
-      const data = await res.json();
-      setCodexStatus(data);
-    } catch (error) {
-      setCodexStatus({ installed: false, error: error.message });
-    } finally {
-      setCheckingCodex(false);
-    }
-  };
 
   const handleApplySettings = async () => {
     setApplying(true);

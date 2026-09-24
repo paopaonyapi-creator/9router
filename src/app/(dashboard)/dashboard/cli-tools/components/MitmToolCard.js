@@ -40,10 +40,6 @@ export default function MitmToolCard({
   const mitmHosts = TOOL_HOSTS[tool.id] ?? [];
   const canRunWithoutPassword = isWin || hasCachedPassword || needsSudoPassword === false;
 
-  useEffect(() => {
-    if (isExpanded) loadSavedMappings();
-  }, [isExpanded]);
-
   const loadSavedMappings = async () => {
     try {
       const res = await fetch(`/api/cli-tools/antigravity-mitm/alias?tool=${tool.id}`);
@@ -53,6 +49,10 @@ export default function MitmToolCard({
       }
     } catch { /* ignore */ }
   };
+
+  useEffect(() => {
+    if (isExpanded) loadSavedMappings();
+  }, [isExpanded]);
 
   const saveMappings = useCallback(async (mappings) => {
     try {

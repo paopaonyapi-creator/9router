@@ -58,13 +58,6 @@ export default function JcodeToolCard({
     if (initialStatus) setJcodeStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!jcodeStatus) checkJcodeStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -74,6 +67,26 @@ export default function JcodeToolCard({
       console.log("Error fetching model aliases:", error);
     }
   };
+
+  const checkJcodeStatus = async () => {
+    setCheckingJcode(true);
+    try {
+      const res = await fetch("/api/cli-tools/jcode-settings");
+      const data = await res.json();
+      setJcodeStatus(data);
+    } catch (error) {
+      setJcodeStatus({ installed: false, error: error.message });
+    } finally {
+      setCheckingJcode(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!jcodeStatus) checkJcodeStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
 
   useEffect(() => {
     if (jcodeStatus?.installed && !hasInitializedModel.current) {
@@ -91,19 +104,6 @@ export default function JcodeToolCard({
       }
     }
   }, [jcodeStatus, apiKeys]);
-
-  const checkJcodeStatus = async () => {
-    setCheckingJcode(true);
-    try {
-      const res = await fetch("/api/cli-tools/jcode-settings");
-      const data = await res.json();
-      setJcodeStatus(data);
-    } catch (error) {
-      setJcodeStatus({ installed: false, error: error.message });
-    } finally {
-      setCheckingJcode(false);
-    }
-  };
 
   const normalizeLocalhost = (url) => url.replace("://localhost", "://127.0.0.1");
 

@@ -37,13 +37,6 @@ export default function AntigravityToolCard({
     if (initialStatus) setStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (!isExpanded) return;
-    if (!status) fetchStatus();
-    loadSavedMappings();
-    fetchModelAliases();
-  }, [isExpanded]);
-
   const loadSavedMappings = async () => {
     try {
       const res = await fetch("/api/cli-tools/antigravity-mitm/alias?tool=antigravity");
@@ -82,6 +75,13 @@ export default function AntigravityToolCard({
       setStatus({ running: false });
     }
   };
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    if (!status) fetchStatus();
+    loadSavedMappings();
+    fetchModelAliases();
+  }, [isExpanded]);
 
   // MITM elevation is decided by the server OS, not by this browser's OS.
   const serverIsWindows = status?.isWin === true;

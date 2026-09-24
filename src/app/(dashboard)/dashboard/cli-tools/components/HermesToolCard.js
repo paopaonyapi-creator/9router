@@ -60,13 +60,6 @@ export default function HermesToolCard({
     if (initialStatus) setHermesStatus(initialStatus);
   }, [initialStatus]);
 
-  useEffect(() => {
-    if (isExpanded) {
-      if (!hermesStatus) checkStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
   const fetchModelAliases = async () => {
     try {
       const res = await fetch("/api/models/alias");
@@ -76,14 +69,6 @@ export default function HermesToolCard({
       console.log("Error fetching model aliases:", error);
     }
   };
-
-  useEffect(() => {
-    if (hermesStatus?.installed && !hasInitializedModel.current) {
-      hasInitializedModel.current = true;
-      const cfg = hermesStatus.settings?.model;
-      if (cfg?.default) setSelectedModel(cfg.default);
-    }
-  }, [hermesStatus]);
 
   const checkStatus = async () => {
     setChecking(true);
@@ -97,6 +82,21 @@ export default function HermesToolCard({
       setChecking(false);
     }
   };
+
+  useEffect(() => {
+    if (isExpanded) {
+      if (!hermesStatus) checkStatus();
+      fetchModelAliases();
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (hermesStatus?.installed && !hasInitializedModel.current) {
+      hasInitializedModel.current = true;
+      const cfg = hermesStatus.settings?.model;
+      if (cfg?.default) setSelectedModel(cfg.default);
+    }
+  }, [hermesStatus]);
 
   const normalizeLocalhost = (url) => url.replace("://localhost", "://127.0.0.1");
 
