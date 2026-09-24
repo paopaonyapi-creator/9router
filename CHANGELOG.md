@@ -72,9 +72,28 @@
   eslint-config-next `16.3.6` (was `16.1.6`, now matching next). Upstream pins
   these exactly, so a later merge touching the same lines will conflict — keep
   the newer version when it does.
+- Majors adopted ahead of upstream — `undici` `^8.11.2`, `uuid` `^14.0.2`,
+  `socks-proxy-agent` `^10.1.0`, `chalk` `^6.0.0`, `confbox` `^0.3.1`,
+  `material-symbols` `^0.47.5`, `react-is` `^19.3.0` — plus `@xyflow/react`
+  `^12.12.0`, and `cli/` react/react-dom aligned to `19.3.0`. Each was checked
+  against its call sites rather than assumed: `uuidv5.DNS` still resolves (uuid 14
+  dropped the *top-level* `DNS`/`URL` exports, which `cursorChecksum.js` does not
+  use); undici 8 still honours `ProxyAgent({ uri })`, `Agent({ connect.lookup })`
+  DNS-pinning and `fetch(url, { dispatcher })`; `SocksProxyAgent` v10 still exposes
+  `createConnection`/`addRequest` for the `node:http` wrapper in
+  `mimoLoginSession.js` (agent-base removed `.callback`). Providers / alias /
+  OAuth-URL baselines byte-equal, full suite no-regression, `next build` clean,
+  icon font served from the bundled `outlined.css`. Upstream pins the old ranges
+  exactly, so a later merge touching these lines will conflict — keep the newer.
+- **Not adopted: eslint 10.** `eslint-config-next@16.3.6` wires its own `./parser`
+  (Next's vendored `next/dist/compiled/babel/eslint-parser`), whose `scopeManager`
+  has no `addGlobals`; eslint 10's `SourceCode.finalize()` calls it, so *every*
+  file dies with `TypeError: scopeManager.addGlobals is not a function`. A bare
+  flat config lints clean on eslint 10.11.0, so the blocker is Next's parser, not
+  eslint — stay on `^9` until `eslint-config-next` drops it. `eslint-plugin-import`
+  / `-jsx-a11y` / `-react` also still cap their peer at `^9`.
 - Patch bumps in-range: next/`@next/third-parties` `^16.3.5`, jose `^6.2.12`,
-  marked `^18.0.13`, undici `^7.29.1`, `@xyflow/react` `^12.11.6`, open `^11.0.4`,
-  postcss `^8.5.28`
+  marked `^18.0.13`, open `^11.0.4`, postcss `^8.5.28`
 
 ## Tests
 - **Claude**: pin the Claude Code version expectations to upstream's `2.1.280`
