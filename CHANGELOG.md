@@ -1,4 +1,4 @@
-# Unreleased
+# v0.5.87 (2026-09-25)
 
 ## Features
 - **Desktop**: one-click launcher shortcuts — `scripts/start-9router.ps1`
