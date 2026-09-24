@@ -16,13 +16,29 @@ async function tryBunSqlite() {
   }
 }
 
-async function tryBetterSqlite() {
-  // Skip on Bun — better-sqlite3 native bindings unsupported
-  if (process.versions.bun) return null;
-  // Skip on Node >= 24: the native addon SIGSEGVs on load there, which is a
-  // process-level crash the try/catch below cannot recover from. node:sqlite covers it.
+/**
+ * Whether the better-sqlite3 native addon is safe to load in this process.
+ *
+ * The addon SIGSEGVs on load under Bun and Node >= 24 — a process-level crash that no
+ * try/catch can recover from, so it has to be skipped up front, never caught.
+ *
+ * This verdict was written against better-sqlite3 ^12.6. The 13.x prebuilds bundled in
+ * the tarball do load cleanly under Node 24.19 in a plain process, so the guard is now
+ * conservative rather than measured. Re-test before relaxing it: the cost of being
+ * wrong is a dead server, the cost of keeping it is the sqlite3-CLI fallback.
+ *
+ * Exported for any other site that loads the addon outside this driver chain — see the
+ * Cursor auto-import route, which reads a foreign state.vscdb directly.
+ */
+export function canUseBetterSqlite() {
+  // Bun has no native bindings; node:sqlite covers it.
+  if (process.versions.bun) return false;
   const [nodeMajor] = process.versions.node.split(".").map(Number);
-  if (nodeMajor >= 24) return null;
+  return nodeMajor < 24;
+}
+
+async function tryBetterSqlite() {
+  if (!canUseBetterSqlite()) return null;
   try {
     const { createBetterSqliteAdapter } = await import("./adapters/betterSqliteAdapter.js");
     return createBetterSqliteAdapter(DATA_FILE);

@@ -15,6 +15,17 @@
   surfaced 20 `set-state-in-effect` warnings that the rule previously could not see
   through the forward references (89 → 109): same underlying debt, now reported by the
   rule that can actually describe it. Total warnings 343 → 324, errors still 0.
+- **Cursor auto-import**: no longer loads the `better-sqlite3` addon on runtimes the DB
+  driver already refuses it on. `src/lib/db/driver.js` skips it under Bun and Node ≥ 24
+  because the addon `SIGSEGV`s on load there — a process-level crash no `try/catch` can
+  recover from — but the route reached for it with a bare `require`, making "open a
+  `state.vscdb`" the one action that could take the whole server down. The predicate is
+  now exported from the driver as `canUseBetterSqlite()` and shared, so the two sites
+  cannot drift apart; the route falls through to the `sqlite3` CLI strategy as designed.
+  Flagged while checking this: that guard was written against `better-sqlite3` ^12.6, and
+  the pinned 13.0.3 prebuilds do load cleanly under Node 24.19 in a plain process, so it
+  is likely conservative rather than accurate. Kept as-is on asymmetric cost — a dead
+  server against a manual-paste fallback — with the observation recorded in the comment.
 
 # v0.5.87 (2026-09-25)
 

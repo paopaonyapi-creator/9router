@@ -57,3 +57,55 @@ describe("Driver fallback chain", () => {
     expect(db.driver).toBe("sql.js");
   });
 });
+
+// The guard is a load-time decision: on runtimes where the addon is known to SIGSEGV,
+// requiring it kills the process and no try/catch can recover, so callers outside the
+// chain (the Cursor auto-import route) share this predicate instead of guessing.
+describe("canUseBetterSqlite", () => {
+  const versions = process.versions;
+  const originalNode = versions.node;
+  const originalBun = versions.bun;
+
+  const setRuntime = (node, bun) => {
+    Object.defineProperty(versions, "node", { value: node, configurable: true, writable: true });
+    if (bun === undefined) delete versions.bun;
+    else Object.defineProperty(versions, "bun", { value: bun, configurable: true, writable: true });
+  };
+
+  afterEach(() => {
+    setRuntime(originalNode, originalBun);
+  });
+
+  it("allows Node below 24, where the addon loads and drives the chain", async () => {
+    setRuntime("22.12.0");
+    const { canUseBetterSqlite } = await import("@/lib/db/driver.js");
+    expect(canUseBetterSqlite()).toBe(true);
+  });
+
+  it("blocks Node 24 and above", async () => {
+    setRuntime("24.0.0");
+    const { canUseBetterSqlite } = await import("@/lib/db/driver.js");
+    expect(canUseBetterSqlite()).toBe(false);
+    setRuntime("25.1.0");
+    expect(canUseBetterSqlite()).toBe(false);
+  });
+
+  it("blocks Bun regardless of the Node version it reports", async () => {
+    setRuntime("20.11.0", "1.2.3");
+    const { canUseBetterSqlite } = await import("@/lib/db/driver.js");
+    expect(canUseBetterSqlite()).toBe(false);
+  });
+
+  it("is what actually decides the chain on Node 24", async () => {
+    setRuntime("24.19.0");
+    delete global._dbAdapter;
+    vi.resetModules();
+    const { getAdapter, canUseBetterSqlite } = await import("@/lib/db/driver.js");
+    expect(canUseBetterSqlite()).toBe(false);
+    const db = await getAdapter();
+    // The policy point is that the chain never lands on better-sqlite3 here; which
+    // fallback wins depends on what else the runtime and filesystem offer.
+    expect(db.driver).not.toBe("better-sqlite3");
+    expect(["node:sqlite", "sql.js"]).toContain(db.driver);
+  });
+});

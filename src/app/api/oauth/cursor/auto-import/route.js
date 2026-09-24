@@ -4,6 +4,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { canUseBetterSqlite } from "@/lib/db/driver.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -219,18 +220,22 @@ export async function GET() {
       }
     }
 
-    // Strategy 1: better-sqlite3 (bundled — no external tools required)
-    try {
-      const tokens = extractTokensViaBetterSqlite(dbPath);
-      if (tokens.accessToken && tokens.machineId) {
-        return NextResponse.json({
-          found: true,
-          accessToken: tokens.accessToken,
-          machineId: tokens.machineId,
-        });
+    // Strategy 1: better-sqlite3 (bundled — no external tools required). Gated by the
+    // same runtime check the DB driver uses, because loading the addon where it is
+    // known to SIGSEGV takes down this whole process and no try/catch can stop that.
+    if (canUseBetterSqlite()) {
+      try {
+        const tokens = extractTokensViaBetterSqlite(dbPath);
+        if (tokens.accessToken && tokens.machineId) {
+          return NextResponse.json({
+            found: true,
+            accessToken: tokens.accessToken,
+            machineId: tokens.machineId,
+          });
+        }
+      } catch {
+        // Native bindings unavailable — try CLI fallback
       }
-    } catch {
-      // Native bindings unavailable — try CLI fallback
     }
 
     // Strategy 2: sqlite3 CLI
