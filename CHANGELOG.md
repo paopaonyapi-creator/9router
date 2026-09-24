@@ -26,6 +26,21 @@
   the pinned 13.0.3 prebuilds do load cleanly under Node 24.19 in a plain process, so it
   is likely conservative rather than accurate. Kept as-is on asymmetric cost — a dead
   server against a manual-paste fallback — with the observation recorded in the comment.
+- **Auth**: the login page no longer advertises `Default password is 123456` on an
+  instance that has already set its own. The line rendered unconditionally while
+  `/api/auth/status` was already returning `hasPassword`, and the amber "no password
+  set" warning right below it was correctly gated — so anyone on the LAN (the server
+  binds a reachable interface, e.g. `192.168.1.127:20128`) was handed the default to
+  try even though it no longer worked. The hint now shows only while no password is
+  set, keeping fresh-install UX.
+- **Provider icons**: stop requesting a logo that cannot exist for custom nodes. Node
+  ids are keyed `openai-compatible-<uuid>` / `anthropic-compatible-<uuid>`, and there is
+  no such file under `public/providers/`, so every mount logged a 404 before the
+  session-level failure cache kicked in. `getProviderIconSrc` now maps those ids to the
+  family logo (`openai.png`, `anthropic.png`), which fixes the picture as well as the
+  noise; `markProviderIconMissing` records the resolved file id so one dead family file
+  is not re-probed per node. Verified in the browser: `/providers/openai.png` and
+  `/providers/anthropic.png` return 200 and the Usage console is empty.
 
 # v0.5.87 (2026-09-25)
 
