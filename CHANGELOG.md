@@ -1,4 +1,4 @@
-# Unreleased
+# v0.5.88 (2026-09-25)
 
 ## Fixes
 - **Dashboard**: clear all 39 `react-hooks/immutability` violations by reordering
