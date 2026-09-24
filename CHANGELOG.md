@@ -59,6 +59,12 @@
 - **Stream**: passthrough no longer appends a second `data: [DONE]` when the upstream
   already terminated its own stream — strict clients choked on the duplicate sentinel
   (also tolerates `data:[DONE]` without the trailing space)
+- **OAuth CLI**: drop `src/lib/oauth/utils/banner.js`. Nothing in the repo (or anywhere
+  in its git history) imported it, and it pulled `figlet`, `gradient-string` and
+  `chalk-animation` — none declared in `package.json`, none installed — so any call
+  would have died with `ERR_MODULE_NOT_FOUND` before printing a banner. Upstream
+  carries the same dead file; deleting it locally may surface as a modify/delete
+  conflict on a future merge.
 
 ## Dependencies
 - monaco-editor `^0.56.0`, better-sqlite3 `^13.0.3` (optional), pin `dompurify`
@@ -112,6 +118,16 @@
 - **Security audit**: source-grep audits resolve repo files from the test file's
   location instead of the process cwd — running vitest from `tests/` vs the repo
   root no longer decides pass/fail on its own
+- **Cursor**: `unit/cursor-models.test.js` stubbed `global.fetch` while
+  `cursorModels.js` had moved to `http2PostProto`, so the catalog case escaped to the
+  network, spent ~1.1s talking to `agent.api5.cursor.sh`, and failed on every run —
+  hidden from the regression gate only because it also sat in the machine snapshot.
+  It now mocks `node:http2` and asserts the real contract: the h2 origin, `:path`
+  `/agent.v1.AgentService/GetUsableModels`, `accept`/`content-type: application/proto`,
+  the stripped `connect-accept-encoding` / `connect-protocol-version` streaming
+  headers, the empty unary body, client teardown, the 5-minute cache, fail-open on
+  both an error status and a transport error, and the no-credentials skip. 5 cases in
+  50ms with no network.
 
 # v0.5.86 (2026-09-23)
 
