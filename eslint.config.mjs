@@ -9,6 +9,16 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 // already cleared (39 access-before-declare effects were reordered in v0.5.87) and is
 // deliberately no longer listed. Several purity hits are also not genuine: they are
 // Date.now() in event handlers, or in a useMemo whose deps include the refresh tick.
+//
+// set-state-in-effect (109 sites / 53 files) was triaged on 2026-09-25 and left alone
+// on purpose: no effect sets state without a dependency array, so nothing re-runs every
+// render, and the sites are the sanctioned-but-discouraged shapes — syncing a prop into
+// state, seeding state from a fetched response, or a spinner flag before an await.
+// Converting them to render-phase adjustment is not mechanical: `if (status !==
+// initialStatus) setStatus(initialStatus)` renders forever whenever the parent passes a
+// fresh object literal, which is exactly what the deps array prevents today. Re-triage
+// per file with browser verification before changing any of these; ~50 of the 109 sit in
+// the near-identical cli-tools ToolCard family, so one wrong move replicates 14 times.
 const REACT_HOOKS_DEBT = [
   "react-hooks/set-state-in-effect",
   "react-hooks/purity",
