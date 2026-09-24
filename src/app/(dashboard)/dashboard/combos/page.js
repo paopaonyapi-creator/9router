@@ -69,7 +69,7 @@ export default function CombosPage() {
 
   useEffect(() => {
     fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Drop stale selection when the combo list changes (delete / refresh).
   useEffect(() => {

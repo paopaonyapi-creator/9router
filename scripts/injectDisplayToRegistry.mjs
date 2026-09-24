@@ -19,7 +19,8 @@ const displayBody = displaySrc
   .replace(/^export const /gm, "const ")
   .replace(/^export function /gm, "function ")
   .replace(/^const RISK_NOTICE\s*=.*$/m, ""); // remove redeclaration
-// eslint-disable-next-line no-new-func
+// Evaluates repo-local source only: displaySrc is read from open-sse/config below,
+// never from user or network input. Do not feed anything untrusted into this body.
 const getDisplay = new Function("RISK_NOTICE", `${displayBody}; return PROVIDER_DISPLAY;`);
 const DISPLAY = getDisplay(RISK_NOTICE);
 
